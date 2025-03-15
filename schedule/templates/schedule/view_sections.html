@@ -55,6 +55,7 @@
                                         <th>Room</th>
                                         <th>When</th>
                                         <th>Students</th>
+                                        <th>Max Size</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -72,6 +73,19 @@
                                                     <i class="bi bi-people"></i> {{ section.students_count }}
                                                 </a>
                                             </td>
+                                            <td>
+                                                {% if section.max_size != 'Unlimited' %}
+                                                    {% if section.students_count >= section.max_size %}
+                                                        <span class="badge bg-danger">{{ section.students_count }}/{{ section.max_size }}</span>
+                                                    {% elif section.students_count >= section.max_size|add:"-3" %}
+                                                        <span class="badge bg-warning">{{ section.students_count }}/{{ section.max_size }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ section.students_count }}/{{ section.max_size }}</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {{ section.max_size }}
+                                                {% endif %}
+                                            </td>
                                             <td class="d-flex">
                                                 <a href="{% url 'edit_section' section_id=section.id %}" class="btn btn-sm btn-warning me-1">
                                                     <i class="bi bi-pencil"></i> Edit
@@ -83,7 +97,7 @@
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="8" class="text-center">No sections found for this course.</td>
+                                            <td colspan="9" class="text-center">No sections found for this course.</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

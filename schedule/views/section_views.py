@@ -161,7 +161,7 @@ def master_schedule(request):
         'total_sections': sections.count()
     }
     
-    return render(request, 'schedule/sections/master_schedule.html', context)
+    return render(request, 'schedule/master_schedule.html', context)
 
 
 def student_schedules(request):
@@ -447,6 +447,7 @@ def view_sections(request):
             'period': section.period.period_name if section.period else 'Unassigned',
             'room': section.room.number if section.room else 'Unassigned',
             'students_count': section.students.count(),
+            'max_size': section.max_size or 'Unlimited',
             'when': section.when
         })
     

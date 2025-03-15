@@ -47,6 +47,9 @@
                                                 <strong>Teacher:</strong> {{ section.teacher.name }}<br>
                                                 <strong>Room:</strong> {{ section.room.number }}<br>
                                                 <strong>Students:</strong> {{ section.get_students_list|length }}
+                                                {% if section.max_size %}
+                                                <span class="text-muted">/ {{ section.max_size }}</span>
+                                                {% endif %}
                                             </p>
                                             <a href="{% url 'edit_section' section.id %}" class="btn btn-sm btn-primary">Edit</a>
                                         </div>
