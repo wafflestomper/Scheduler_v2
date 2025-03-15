@@ -53,9 +53,9 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="slot" class="form-label">Period Number</label>
-                            <input type="number" class="form-control" id="slot" name="slot" value="{{ period.slot }}" min="1" max="10">
-                            <div class="form-text">Period number (e.g., 1, 2, 3)</div>
+                            <label for="slot" class="form-label">Period Identifier</label>
+                            <input type="text" class="form-control" id="slot" name="slot" value="{{ period.slot }}" maxlength="10" required>
+                            <div class="form-text">Period identifier (e.g., 1, 2, A, B, L for Lunch)</div>
                         </div>
                     </div>
                     

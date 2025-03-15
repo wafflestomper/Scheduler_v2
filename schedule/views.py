@@ -113,7 +113,7 @@ class CSVUploadView(View):
         elif data_type == 'courses':
             return ['course_id', 'name', 'course_type', 'grade_level', 'teachers', 'sections_needed', 'duration', 'max_size']
         elif data_type == 'periods':
-            return ['period_id', 'period_name', 'days', 'start_time', 'end_time']
+            return ['period_id', 'period_name', 'days', 'slot', 'start_time', 'end_time']
         elif data_type == 'sections':
             return ['course_id', 'section_number', 'period']  # Only require course_id, section_number, and period
         return []
@@ -227,7 +227,7 @@ class CSVUploadView(View):
                 defaults={
                     'period_name': row.get('period_name', ''),
                     'days': days,
-                    'slot': int(row.get('slot', 1)),  # Default to slot 1 if not specified
+                    'slot': row.get('slot', '1'),  # Now a string value, default to '1' if not specified
                     'start_time': start_time,
                     'end_time': end_time,
                 }
@@ -511,11 +511,13 @@ def download_template_csv(request, template_type):
         writer.writerow(headers)
         writer.writerow(['C001', 'Algebra I', 'Core', '9', 'T001,T002', '3', 'Semester', '30'])
     elif template_type == 'periods':
-        headers = ['period_id', 'period_name', 'days', 'start_time', 'end_time']
+        headers = ['period_id', 'period_name', 'days', 'slot', 'start_time', 'end_time']
         writer.writerow(headers)
-        writer.writerow(['P001', 'First Period', 'M', '08:00', '08:50'])
-        writer.writerow(['P002', 'Second Period', 'M|W|F', '08:55', '09:45'])
-        writer.writerow(['P003', 'Lunch', 'M|T|W|TH|F', '12:00', '12:45'])
+        writer.writerow(['P001', 'First Period', 'M', '1', '08:00', '08:50'])
+        writer.writerow(['P002', 'Second Period', 'M|W|F', '2', '08:55', '09:45'])
+        writer.writerow(['P003', 'Lunch', 'M|T|W|TH|F', 'L', '12:00', '12:45'])
+        writer.writerow(['P004', 'Period A', 'T|TH', 'A', '13:00', '13:50'])
+        writer.writerow(['P005', 'Period L', 'M|T|W|TH|F', 'L', '11:30', '12:15'])
     elif template_type == 'sections':
         # For sections, show all possible fields in the template even though some are optional
         headers = ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
@@ -1033,6 +1035,11 @@ def create_period(request):
             messages.error(request, 'At least one day must be selected.')
             return redirect('create_period')
         
+        # Validate slot
+        if not slot:
+            messages.error(request, 'Period slot/identifier is required.')
+            return redirect('create_period')
+        
         # Convert days list to pipe-separated string
         days = '|'.join(days_list)
         
@@ -1042,7 +1049,7 @@ def create_period(request):
                 id=period_id,
                 period_name=period_name,
                 days=days,
-                slot=int(slot),
+                slot=slot,  # No need to convert to int anymore
                 start_time=start_time,
                 end_time=end_time
             )
@@ -1079,13 +1086,22 @@ def edit_period(request, period_id):
             }
             return render(request, 'schedule/edit_period.html', context)
         
+        # Validate slot
+        if not slot:
+            messages.error(request, 'Period slot/identifier is required.')
+            context = {
+                'period': period,
+                'day_choices': Period.DAY_CHOICES,
+            }
+            return render(request, 'schedule/edit_period.html', context)
+        
         # Convert days list to pipe-separated string
         days = '|'.join(days_list)
         
         # Update period
         period.period_name = period_name
         period.days = days
-        period.slot = int(slot)
+        period.slot = slot  # No need to convert to int anymore
         period.start_time = start_time
         period.end_time = end_time
         

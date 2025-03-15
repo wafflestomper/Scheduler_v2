@@ -321,7 +321,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>period_id,period_name,days,start_time,end_time</code></p>
+                                <p><code>period_id,period_name,days,slot,start_time,end_time</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -331,6 +331,7 @@
                                                 <th>period_id</th>
                                                 <th>period_name</th>
                                                 <th>days</th>
+                                                <th>slot</th>
                                                 <th>start_time</th>
                                                 <th>end_time</th>
                                             </tr>
@@ -340,6 +341,7 @@
                                                 <td>P001</td>
                                                 <td>First Period</td>
                                                 <td>M</td>
+                                                <td>1</td>
                                                 <td>08:00</td>
                                                 <td>08:45</td>
                                             </tr>
@@ -347,8 +349,17 @@
                                                 <td>P002</td>
                                                 <td>Second Period</td>
                                                 <td>M|W|F</td>
+                                                <td>2</td>
                                                 <td>08:50</td>
                                                 <td>09:35</td>
+                                            </tr>
+                                            <tr>
+                                                <td>P003</td>
+                                                <td>Lunch</td>
+                                                <td>M|T|W|TH|F</td>
+                                                <td>L</td>
+                                                <td>12:00</td>
+                                                <td>12:45</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -359,6 +370,7 @@
                                         <br>Day codes: M = Monday, T = Tuesday, W = Wednesday, TH = Thursday, F = Friday.
                                         <br>Multiple days can be specified using pipe (|) or comma (,) as separators.
                                         <br>Time format should be 24-hour (HH:MM).
+                                        <br>Period identifiers can be numbers (1, 2, 3) or letters (A, B, L for Lunch).
                                     </small>
                                 </div>
                             </div>

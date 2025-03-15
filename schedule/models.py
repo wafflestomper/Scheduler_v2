@@ -82,7 +82,7 @@ class Period(models.Model):
     id = models.CharField(max_length=10, primary_key=True)
     period_name = models.CharField(max_length=50, blank=True, null=True, help_text="Descriptive name for this period")
     days = models.TextField(default='M', help_text="Format: 'M|T|W' for Monday, Tuesday, Wednesday")
-    slot = models.IntegerField(help_text="Period number (1-6)")
+    slot = models.CharField(max_length=10, help_text="Period identifier (e.g., 1, 2, A, B, L for Lunch)")
     start_time = models.TimeField()
     end_time = models.TimeField()
 
