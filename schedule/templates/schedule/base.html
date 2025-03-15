@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}School Scheduler{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -32,10 +33,30 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'index' %}">Home</a>
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'index' %}">Home</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/students/' in request.path or '/view-students/' in request.path %}active{% endif %}" href="{% url 'view_students' %}">Students</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'view_courses' %}">Courses</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/teachers/' in request.path %}active{% endif %}" href="{% url 'view_teachers' %}">Teachers</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/rooms/' in request.path %}active{% endif %}" href="{% url 'view_rooms' %}">Rooms</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/periods/' in request.path %}active{% endif %}" href="{% url 'view_periods' %}">Periods</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/enroll-students/' in request.path %}active{% endif %}" href="{% url 'enroll_students' %}">Enrollments</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'csv_upload' %}">Upload CSV</a>
                         </li>

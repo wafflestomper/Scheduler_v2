@@ -159,3 +159,15 @@ class Enrollment(models.Model):
         
     def __str__(self):
         return f"{self.student.name} enrolled in {self.section}"
+
+class CourseEnrollment(models.Model):
+    """Tracks students enrolled in courses (but not yet assigned to specific sections)"""
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='course_enrollments')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='student_enrollments')
+    date_enrolled = models.DateField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = [('student', 'course')]
+        
+    def __str__(self):
+        return f"{self.student.name} enrolled in {self.course.name}"

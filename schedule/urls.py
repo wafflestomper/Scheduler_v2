@@ -26,6 +26,9 @@ from .views.schedule_generation_views import (
 from .views.import_export_views import (
     CSVUploadView, download_template_csv
 )
+from .views.enrollment_views import (
+    enroll_students, enroll_student_to_course, batch_enroll_students, assign_students_to_sections
+)
 
 urlpatterns = [
     path('', index, name='index'),
@@ -59,4 +62,10 @@ urlpatterns = [
     path('courses/create/', create_course, name='create_course'),
     path('courses/<str:course_id>/edit/', edit_course, name='edit_course'),
     path('courses/<str:course_id>/delete/', delete_course, name='delete_course'),
+    
+    # Enrollment management
+    path('enroll-students/', enroll_students, name='enroll_students'),
+    path('api/enroll-student-to-course/', enroll_student_to_course, name='enroll_student_to_course'),
+    path('api/batch-enroll-students/', batch_enroll_students, name='batch_enroll_students'),
+    path('api/assign-students-to-sections/', assign_students_to_sections, name='assign_students_to_sections'),
 ] 
