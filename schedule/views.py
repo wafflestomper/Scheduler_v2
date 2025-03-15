@@ -115,7 +115,7 @@ class CSVUploadView(View):
         elif data_type == 'periods':
             return ['period_id', 'start_time', 'end_time']
         elif data_type == 'sections':
-            return ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
+            return ['course_id', 'section_number', 'period']  # Only require course_id, section_number, and period
         return []
         
     def process_students(self, reader):
@@ -239,8 +239,24 @@ class CSVUploadView(View):
                     except Teacher.DoesNotExist:
                         raise ValidationError(f"Teacher with ID '{row['teacher']}' does not exist. Please add this teacher first or leave the field blank.")
                 
+                # Get the period (required)
                 period = Period.objects.get(id=row['period'])
-                room = Room.objects.get(id=row['room'])
+                
+                # Make room optional
+                room = None
+                if row.get('room'):
+                    try:
+                        room = Room.objects.get(id=row['room'])
+                    except Room.DoesNotExist:
+                        raise ValidationError(f"Room with ID '{row['room']}' does not exist. Please add this room first or leave the field blank.")
+                
+                # Make max_size optional
+                max_size = None
+                if row.get('max_size') and row['max_size'].strip():
+                    try:
+                        max_size = int(row['max_size'])
+                    except ValueError:
+                        raise ValidationError(f"Invalid max_size value: '{row['max_size']}'. Please enter a valid number or leave the field blank.")
                 
                 # Normalize the 'when' field - convert to lowercase and strip
                 when_value = row.get('when', 'year').lower().strip()
@@ -273,10 +289,11 @@ class CSVUploadView(View):
                     id=section_id,
                     defaults={
                         'course': course,
+                        'section_number': int(row['section_number']),
                         'teacher': teacher,
                         'room': room,
                         'period': period,
-                        'students': '',  # Empty initially, students will be assigned later
+                        'max_size': max_size,
                         'when': when_value,
                     }
                 )
@@ -284,8 +301,6 @@ class CSVUploadView(View):
                 raise ValidationError(f"Course with ID '{row['course_id']}' does not exist. Please add this course first.")
             except Period.DoesNotExist:
                 raise ValidationError(f"Period with ID '{row['period']}' does not exist. Please add this period first.")
-            except Room.DoesNotExist:
-                raise ValidationError(f"Room with ID '{row['room']}' does not exist. Please add this room first.")
             except ValidationError as e:
                 # Re-raise specific validation errors
                 raise e
@@ -470,40 +485,32 @@ def download_template_csv(request, template_type):
     
     writer = csv.writer(response)
     
-    # Write appropriate headers based on template type
-    if template_type == 'students':
-        writer.writerow(['student_id', 'first_name', 'nickname', 'last_name', 'grade_level'])
-        # Add a sample row
-        writer.writerow(['S001', 'John', 'Johnny', 'Doe', '6'])
-        writer.writerow(['S002', 'Jane', '', 'Smith', '7'])
-    elif template_type == 'teachers':
-        writer.writerow(['teacher_id', 'first_name', 'last_name', 'availability', 'grade_level', 'subjects', 'gender'])
-        # Add a sample row
-        writer.writerow(['T001', 'Sarah', 'Smith', 'M1-M6,T1-T3', '6,7,8', 'Math|Science', 'F'])
-        writer.writerow(['T002', 'Robert', 'Johnson', 'M1-M6,T1-T6,W1-W6', '7,8', 'English|History', 'M'])
-    elif template_type == 'rooms':
-        writer.writerow(['room_id', 'number', 'capacity', 'type'])
-        # Add a sample row
-        writer.writerow(['R001', '101', '30', 'classroom'])
-    elif template_type == 'courses':
-        writer.writerow(['course_id', 'name', 'course_type', 'teachers', 'grade_level', 'sections_needed', 'duration', 'max_size'])
-        # Add sample rows
-        writer.writerow(['C001', 'Math 6', 'core', 'T001|T002', '6', '2', 'year', '30'])
-        writer.writerow(['C002', 'Art', 'elective', 'T003', '0', '1', 'trimester', '25'])
-        writer.writerow(['C003', 'Spanish I', 'language', 'T004', '7', '1', 'year', '28'])
-        writer.writerow(['C004', 'Physical Education', 'required_elective', 'T005|T006', '0', '3', 'quarter', '35'])
-    elif template_type == 'periods':
-        writer.writerow(['period_id', 'start_time', 'end_time'])
-        # Add a sample row
-        writer.writerow(['P001', '08:00', '08:45'])
-        writer.writerow(['P002', '08:50', '09:35'])
-    elif template_type == 'sections':
-        writer.writerow(['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when'])
-        # Add sample rows
-        writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '30', 'year'])
-        writer.writerow(['C001', '2', 'T002', 'P003', 'R002', '25', 't1'])
-        writer.writerow(['C002', '1', '', 'P002', 'R003', '28', 'q2'])  # Example with no teacher
+    # Write header row based on data type
+    headers = self.get_expected_headers(template_type)
     
+    if template_type == 'sections':
+        # For sections, show all possible fields in the template even though some are optional
+        headers = ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
+        writer.writerow(headers)
+        
+        # Add example rows
+        writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '25', 'q1'])  # Complete example
+        writer.writerow(['C002', '1', '', 'P002', '', '', 'q2'])  # Example with no teacher, room, or max_size
+    else:
+        writer.writerow(headers)
+        
+        # Add example data rows for other types
+        if template_type == 'students':
+            writer.writerow(['S001', 'John', 'Johnny', 'Doe', '9'])
+        elif template_type == 'teachers':
+            writer.writerow(['T001', 'Jane', 'Smith'])
+        elif template_type == 'rooms':
+            writer.writerow(['R001', '101', '30', 'Classroom'])
+        elif template_type == 'courses':
+            writer.writerow(['C001', 'Algebra I', 'Core', '9', 'T001,T002', '3', 'Semester', '30'])
+        elif template_type == 'periods':
+            writer.writerow(['P001', '08:00', '08:50'])
+            
     return response
 
 def view_students(request):

@@ -89,48 +89,43 @@ class Period(models.Model):
         return f"{self.get_day_display()} Period {self.slot} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
 
 class Section(models.Model):
-    WHEN_CHOICES = [
-        ('year', 'Full Year'),
-        ('t1', 'Trimester 1'),
-        ('t2', 'Trimester 2'),
-        ('t3', 'Trimester 3'),
-        ('q1', 'Quarter 1'),
-        ('q2', 'Quarter 2'),
-        ('q3', 'Quarter 3'),
-        ('q4', 'Quarter 4'),
-    ]
-    
-    id = models.CharField(max_length=50, primary_key=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    id = models.CharField(max_length=20, primary_key=True)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='sections')
+    section_number = models.IntegerField(default=1)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
-    room = models.ForeignKey(Room, on_delete=models.CASCADE)
     period = models.ForeignKey(Period, on_delete=models.CASCADE)
-    students = models.TextField(blank=True, help_text="Format: 'S001|S002'")
-    when = models.CharField(max_length=10, choices=WHEN_CHOICES, default='year', 
-                          help_text="When this section is scheduled (year, trimester, quarter)")
-    
-    class Meta:
-        unique_together = [
-            ('teacher', 'period'),  # A teacher can't teach multiple sections in the same period
-            ('room', 'period'),     # A room can't be used for multiple sections in the same period
-        ]
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
+    students = models.ManyToManyField(Student, through='Enrollment', related_name='sections', blank=True)
+    max_size = models.IntegerField(null=True, blank=True)
+    when = models.CharField(max_length=20, default='year',
+                          choices=[('year', 'Full Year'), 
+                                  ('semester', 'Semester'),
+                                  ('quarter', 'Quarter'),
+                                  ('trimester', 'Trimester'),
+                                  ('q1', 'Quarter 1'),
+                                  ('q2', 'Quarter 2'),
+                                  ('q3', 'Quarter 3'),
+                                  ('q4', 'Quarter 4'),
+                                  ('s1', 'Semester 1'),
+                                  ('s2', 'Semester 2'),
+                                  ('t1', 'Trimester 1'),
+                                  ('t2', 'Trimester 2'),
+                                  ('t3', 'Trimester 3'),
+                                  ])
     
     def __str__(self):
-        return f"{self.course.name} - {self.teacher.name} - {self.period}"
+        return f"{self.course.name} - Section {self.section_number}"
     
-    def get_students_list(self):
-        return self.students.split('|') if self.students else []
+    def current_enrollment(self):
+        return self.students.count()
+
+class Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    date_enrolled = models.DateField(auto_now_add=True)
     
-    def add_student(self, student_id):
-        students_list = self.get_students_list()
-        if student_id not in students_list:
-            students_list.append(student_id)
-            self.students = '|'.join(students_list)
-            self.save()
-    
-    def remove_student(self, student_id):
-        students_list = self.get_students_list()
-        if student_id in students_list:
-            students_list.remove(student_id)
-            self.students = '|'.join(students_list)
-            self.save()
+    class Meta:
+        unique_together = [('student', 'section')]
+        
+    def __str__(self):
+        return f"{self.student.name} enrolled in {self.section}"

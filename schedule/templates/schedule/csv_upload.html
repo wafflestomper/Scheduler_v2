@@ -437,6 +437,51 @@
         </div>
     </div>
 </div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>CSV Format for Sections</h5>
+    </div>
+    <div class="card-body">
+        <p>Upload a CSV file with the following headers:</p>
+        <p><strong>Required fields:</strong> course_id, section_number, period</p>
+        <p><strong>Optional fields:</strong> teacher, room, max_size, when</p>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>course_id</th>
+                    <th>section_number</th>
+                    <th>teacher</th>
+                    <th>period</th>
+                    <th>room</th>
+                    <th>max_size</th>
+                    <th>when</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>C001</td>
+                    <td>1</td>
+                    <td>T001</td>
+                    <td>P001</td>
+                    <td>R001</td>
+                    <td>25</td>
+                    <td>q1</td>
+                </tr>
+                <tr>
+                    <td>C002</td>
+                    <td>1</td>
+                    <td></td>
+                    <td>P002</td>
+                    <td></td>
+                    <td></td>
+                    <td>q2</td>
+                </tr>
+            </tbody>
+        </table>
+        <a href="{% url 'download_csv_template' 'sections' %}" class="btn btn-primary">Download Template</a>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
