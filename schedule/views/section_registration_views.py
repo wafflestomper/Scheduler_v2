@@ -234,8 +234,11 @@ def conflict_resolution_phase(initial_results):
                         # No alternate section available, remove this enrollment
                         enrollment.delete()
                         unresolved_count += 1
+                        # Fetch the period object for better error message
+                        period = Period.objects.get(id=period_id)
+                        period_display = str(period)  # Use the string representation
                         errors.append(f"Removed conflicting enrollment for {student.name} in {enrollment.section.course.name} " +
-                                      f"during period {Period.objects.get(id=period_id).name}")
+                                      f"during period {period_display}")
     
     return {
         'resolved_count': resolved_count,
