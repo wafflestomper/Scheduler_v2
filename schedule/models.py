@@ -81,7 +81,7 @@ class Period(models.Model):
     
     id = models.CharField(max_length=10, primary_key=True)
     period_name = models.CharField(max_length=50, blank=True, null=True, help_text="Descriptive name for this period")
-    day = models.CharField(max_length=2, choices=DAY_CHOICES)
+    days = models.TextField(default='M', help_text="Format: 'M|T|W' for Monday, Tuesday, Wednesday")
     slot = models.IntegerField(help_text="Period number (1-6)")
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -89,7 +89,30 @@ class Period(models.Model):
     def __str__(self):
         if self.period_name:
             return f"{self.period_name} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
-        return f"{self.get_day_display()} Period {self.slot} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
+        
+        days_display = self.get_days_display()
+        return f"{days_display} Period {self.slot} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
+    
+    def get_days_list(self):
+        return self.days.split('|') if self.days else []
+    
+    def get_days_display(self):
+        days_list = self.get_days_list()
+        if not days_list:
+            return "No days"
+        
+        day_names = []
+        day_dict = dict(self.DAY_CHOICES)
+        for day_code in days_list:
+            if day_code in day_dict:
+                day_names.append(day_dict[day_code])
+        
+        if len(day_names) == 1:
+            return day_names[0]
+        elif len(day_names) == 2:
+            return f"{day_names[0]} and {day_names[1]}"
+        else:
+            return ", ".join(day_names[:-1]) + f", and {day_names[-1]}"
 
 class Section(models.Model):
     id = models.CharField(max_length=20, primary_key=True)

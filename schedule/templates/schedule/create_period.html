@@ -1,0 +1,88 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Create New Period{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_periods' %}">Manage Periods</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Create Period</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Create New Period</h2>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="period_id" class="form-label">Period ID</label>
+                            <input type="text" class="form-control" id="period_id" name="period_id" placeholder="P001" required>
+                            <div class="form-text">Unique identifier for this period (e.g., P001, P002)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="period_name" class="form-label">Period Name</label>
+                            <input type="text" class="form-control" id="period_name" name="period_name" placeholder="First Period">
+                            <div class="form-text">Optional descriptive name (e.g., "First Period", "Lunch")</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Days</label>
+                            <div class="d-flex flex-wrap">
+                                {% for day_code, day_name in day_choices %}
+                                <div class="form-check me-3">
+                                    <input class="form-check-input" type="checkbox" name="days" value="{{ day_code }}" id="day-{{ day_code }}">
+                                    <label class="form-check-label" for="day-{{ day_code }}">
+                                        {{ day_name }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">Select all days that apply</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="slot" class="form-label">Period Number</label>
+                            <input type="number" class="form-control" id="slot" name="slot" value="1" min="1" max="10" required>
+                            <div class="form-text">Period number (e.g., 1, 2, 3)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="start_time" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="start_time" name="start_time" value="08:00" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="end_time" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="end_time" name="end_time" value="08:50" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'view_periods' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-success">Create Period</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,52 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Delete Period{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_periods' %}">Manage Periods</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Period</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2>Delete Period: {{ period.id }}</h2>
+        </div>
+        <div class="card-body">
+            {% if sections_using_period > 0 %}
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Cannot Delete Period</h4>
+                    <p>This period is currently being used by {{ sections_using_period }} section(s).</p>
+                    <p>You must reassign these sections to different periods before deleting this period.</p>
+                </div>
+                <a href="{% url 'view_periods' %}" class="btn btn-primary">Return to Periods</a>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete the following period:</p>
+                    <ul>
+                        <li><strong>ID:</strong> {{ period.id }}</li>
+                        <li><strong>Name:</strong> {{ period.period_name|default:"(No name)" }}</li>
+                        <li><strong>Days:</strong> {{ period.get_days_display }}</li>
+                        <li><strong>Period #:</strong> {{ period.slot }}</li>
+                        <li><strong>Time:</strong> {{ period.start_time|time:"H:i" }} - {{ period.end_time|time:"H:i" }}</li>
+                    </ul>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'view_periods' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Period</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

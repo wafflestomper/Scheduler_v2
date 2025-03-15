@@ -321,7 +321,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>period_id,period_name,start_time,end_time</code></p>
+                                <p><code>period_id,period_name,days,start_time,end_time</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -330,6 +330,7 @@
                                             <tr>
                                                 <th>period_id</th>
                                                 <th>period_name</th>
+                                                <th>days</th>
                                                 <th>start_time</th>
                                                 <th>end_time</th>
                                             </tr>
@@ -338,12 +339,14 @@
                                             <tr>
                                                 <td>P001</td>
                                                 <td>First Period</td>
+                                                <td>M</td>
                                                 <td>08:00</td>
                                                 <td>08:45</td>
                                             </tr>
                                             <tr>
                                                 <td>P002</td>
                                                 <td>Second Period</td>
+                                                <td>M|W|F</td>
                                                 <td>08:50</td>
                                                 <td>09:35</td>
                                             </tr>
@@ -353,7 +356,9 @@
                                 <div class="alert alert-info mt-2">
                                     <small>
                                         <strong>Note:</strong> Each period must have a unique ID starting with "P".
-                                        Time format should be 24-hour (HH:MM).
+                                        <br>Day codes: M = Monday, T = Tuesday, W = Wednesday, TH = Thursday, F = Friday.
+                                        <br>Multiple days can be specified using pipe (|) or comma (,) as separators.
+                                        <br>Time format should be 24-hour (HH:MM).
                                     </small>
                                 </div>
                             </div>

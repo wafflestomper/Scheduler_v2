@@ -135,6 +135,29 @@ Enhanced the student management capabilities with the following features:
 
 These enhancements provide administrators with better tools for managing student data and gaining insights into the school's enrollment and scheduling metrics.
 
+## 2025-03-16 15:55 - Enhanced Section Model and Period Descriptions
+
+Improved the flexibility and usability of the scheduling system with the following updates:
+
+1. **Section Model Enhancements**:
+   - Made the `room` field optional to allow sections without assigned rooms
+   - Made the `max_size` field optional with proper validation
+   - Updated CSV processing to handle missing values appropriately
+   - Added the `Enrollment` model to properly represent many-to-many relationships between students and sections
+
+2. **Period Description Improvements**:
+   - Added a descriptive `period_name` field to the Period model
+   - Updated CSV upload template to include the new field
+   - Enhanced the display of periods in the UI using the descriptive name when available
+   - Updated CSV export to include the new field
+
+3. **CSV Upload Interface Updates**:
+   - Updated template documentation to clearly indicate which fields are required vs. optional
+   - Fixed template download links to correctly use the proper URL pattern
+   - Added example rows showing how to use optional fields
+
+These changes provide more flexibility in the scheduling system, allowing for better descriptions of periods and more scenarios for section creation, such as placeholders without assigned rooms or size limits.
+
 ## Next Steps
 
 ### Testing

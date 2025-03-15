@@ -113,7 +113,7 @@ class CSVUploadView(View):
         elif data_type == 'courses':
             return ['course_id', 'name', 'course_type', 'grade_level', 'teachers', 'sections_needed', 'duration', 'max_size']
         elif data_type == 'periods':
-            return ['period_id', 'period_name', 'start_time', 'end_time']
+            return ['period_id', 'period_name', 'days', 'start_time', 'end_time']
         elif data_type == 'sections':
             return ['course_id', 'section_number', 'period']  # Only require course_id, section_number, and period
         return []
@@ -215,12 +215,19 @@ class CSVUploadView(View):
             start_time = row['start_time']
             end_time = row['end_time']
             
+            # Get days from CSV, default to Monday if not specified
+            days = row.get('days', 'M')
+            
+            # Format days - allow comma-separated list to be converted to pipe-separated
+            if ',' in days:
+                days = days.replace(' ', '').replace(',', '|')
+            
             Period.objects.update_or_create(
                 id=row['period_id'],
                 defaults={
-                    'period_name': row.get('period_name', ''),  # Get period_name if it exists, else empty string
-                    'day': 'M',  # Default to Monday since day is no longer in CSV
-                    'slot': 1,   # Default to slot 1 since slot is no longer in CSV
+                    'period_name': row.get('period_name', ''),
+                    'days': days,
+                    'slot': int(row.get('slot', 1)),  # Default to slot 1 if not specified
                     'start_time': start_time,
                     'end_time': end_time,
                 }
@@ -504,10 +511,11 @@ def download_template_csv(request, template_type):
         writer.writerow(headers)
         writer.writerow(['C001', 'Algebra I', 'Core', '9', 'T001,T002', '3', 'Semester', '30'])
     elif template_type == 'periods':
-        headers = ['period_id', 'period_name', 'start_time', 'end_time']
+        headers = ['period_id', 'period_name', 'days', 'start_time', 'end_time']
         writer.writerow(headers)
-        writer.writerow(['P001', 'First Period', '08:00', '08:50'])
-        writer.writerow(['P002', 'Second Period', '08:55', '09:45'])
+        writer.writerow(['P001', 'First Period', 'M', '08:00', '08:50'])
+        writer.writerow(['P002', 'Second Period', 'M|W|F', '08:55', '09:45'])
+        writer.writerow(['P003', 'Lunch', 'M|T|W|TH|F', '12:00', '12:45'])
     elif template_type == 'sections':
         # For sections, show all possible fields in the template even though some are optional
         headers = ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
@@ -988,3 +996,130 @@ def find_schedule_conflicts():
                 })
     
     return conflicts
+
+def view_periods(request):
+    """View all periods with editing and deletion options."""
+    periods = Period.objects.all().order_by('start_time')
+    
+    context = {
+        'periods': periods,
+    }
+    
+    return render(request, 'schedule/view_periods.html', context)
+
+def create_period(request):
+    """Create a new period."""
+    if request.method == 'POST':
+        # Process form data
+        period_id = request.POST.get('period_id')
+        period_name = request.POST.get('period_name')
+        days_list = request.POST.getlist('days')
+        slot = request.POST.get('slot')
+        start_time = request.POST.get('start_time')
+        end_time = request.POST.get('end_time')
+        
+        # Validate period_id
+        if not period_id:
+            messages.error(request, 'Period ID is required.')
+            return redirect('create_period')
+        
+        # Check if period ID already exists
+        if Period.objects.filter(id=period_id).exists():
+            messages.error(request, f'Period with ID "{period_id}" already exists.')
+            return redirect('create_period')
+        
+        # Validate days
+        if not days_list:
+            messages.error(request, 'At least one day must be selected.')
+            return redirect('create_period')
+        
+        # Convert days list to pipe-separated string
+        days = '|'.join(days_list)
+        
+        try:
+            # Create new period
+            period = Period.objects.create(
+                id=period_id,
+                period_name=period_name,
+                days=days,
+                slot=int(slot),
+                start_time=start_time,
+                end_time=end_time
+            )
+            messages.success(request, f'Period {period.id} created successfully!')
+            return redirect('view_periods')
+        except Exception as e:
+            messages.error(request, f'Error creating period: {str(e)}')
+            return redirect('create_period')
+    
+    context = {
+        'day_choices': Period.DAY_CHOICES,
+    }
+    
+    return render(request, 'schedule/create_period.html', context)
+
+def edit_period(request, period_id):
+    """Edit an existing period."""
+    period = get_object_or_404(Period, id=period_id)
+    
+    if request.method == 'POST':
+        # Process form data
+        period_name = request.POST.get('period_name')
+        days_list = request.POST.getlist('days')
+        slot = request.POST.get('slot')
+        start_time = request.POST.get('start_time')
+        end_time = request.POST.get('end_time')
+        
+        # Validate days
+        if not days_list:
+            messages.error(request, 'At least one day must be selected.')
+            context = {
+                'period': period,
+                'day_choices': Period.DAY_CHOICES,
+            }
+            return render(request, 'schedule/edit_period.html', context)
+        
+        # Convert days list to pipe-separated string
+        days = '|'.join(days_list)
+        
+        # Update period
+        period.period_name = period_name
+        period.days = days
+        period.slot = int(slot)
+        period.start_time = start_time
+        period.end_time = end_time
+        
+        # Save changes
+        period.save()
+        messages.success(request, f'Period {period.id} updated successfully!')
+        return redirect('view_periods')
+    
+    context = {
+        'period': period,
+        'day_choices': Period.DAY_CHOICES,
+    }
+    
+    return render(request, 'schedule/edit_period.html', context)
+
+def delete_period(request, period_id):
+    """Delete a period."""
+    period = get_object_or_404(Period, id=period_id)
+    
+    # Check if any sections are using this period
+    sections_using_period = Section.objects.filter(period=period).count()
+    
+    if request.method == 'POST':
+        if sections_using_period > 0:
+            messages.error(request, f'Cannot delete period {period.id} because it is being used by {sections_using_period} section(s).')
+        else:
+            period_id = period.id
+            period.delete()
+            messages.success(request, f'Period {period_id} deleted successfully!')
+        return redirect('view_periods')
+    
+    context = {
+        'period': period,
+        'sections_using_period': sections_using_period,
+    }
+    
+    return render(request, 'schedule/delete_period_confirm.html', context)

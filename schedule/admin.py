@@ -27,8 +27,8 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Period)
 class PeriodAdmin(admin.ModelAdmin):
-    list_display = ('id', 'day', 'slot', 'start_time', 'end_time')
-    list_filter = ('day', 'slot')
+    list_display = ('id', 'period_name', 'days', 'slot', 'start_time', 'end_time')
+    list_filter = ('slot',)
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
