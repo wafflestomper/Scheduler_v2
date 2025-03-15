@@ -372,7 +372,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>course_id,section_number,teacher,period,room,max_size</code></p>
+                                <p><code>course_id,section_number,teacher,period,room,max_size,when</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -385,6 +385,7 @@
                                                 <th>period</th>
                                                 <th>room</th>
                                                 <th>max_size</th>
+                                                <th>when</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -395,6 +396,7 @@
                                                 <td>P001</td>
                                                 <td>R001</td>
                                                 <td>30</td>
+                                                <td>year</td>
                                             </tr>
                                             <tr>
                                                 <td>C001</td>
@@ -403,6 +405,16 @@
                                                 <td>P003</td>
                                                 <td>R002</td>
                                                 <td>25</td>
+                                                <td>t1</td>
+                                            </tr>
+                                            <tr>
+                                                <td>C002</td>
+                                                <td>1</td>
+                                                <td>T003</td>
+                                                <td>P002</td>
+                                                <td>R003</td>
+                                                <td>28</td>
+                                                <td>q2</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -413,6 +425,7 @@
                                         The course_id must refer to a valid course in the system.
                                         Teacher, period, and room must refer to valid IDs in the system (T001, P001, R001, etc.).
                                         Max_size is the maximum number of students allowed in this section.
+                                        <br>When field indicates scheduling period: 'year' (full year), 't1'/'t2'/'t3' (trimesters), or 'q1'/'q2'/'q3'/'q4' (quarters).
                                     </small>
                                 </div>
                             </div>

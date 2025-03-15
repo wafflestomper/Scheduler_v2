@@ -115,7 +115,7 @@ class CSVUploadView(View):
         elif data_type == 'periods':
             return ['period_id', 'start_time', 'end_time']
         elif data_type == 'sections':
-            return ['course_id', 'section_number', 'teacher', 'period', 'room']
+            return ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
         return []
         
     def process_students(self, reader):
@@ -234,6 +234,29 @@ class CSVUploadView(View):
                 period = Period.objects.get(id=row['period'])
                 room = Room.objects.get(id=row['room'])
                 
+                # Normalize the 'when' field - convert to lowercase and strip
+                when_value = row.get('when', 'year').lower().strip()
+                
+                # Map various forms to our standard values
+                if 'year' in when_value:
+                    when_value = 'year'
+                elif 't1' in when_value or 'trimester 1' in when_value or 'trimester1' in when_value:
+                    when_value = 't1'
+                elif 't2' in when_value or 'trimester 2' in when_value or 'trimester2' in when_value:
+                    when_value = 't2'
+                elif 't3' in when_value or 'trimester 3' in when_value or 'trimester3' in when_value:
+                    when_value = 't3'
+                elif 'q1' in when_value or 'quarter 1' in when_value or 'quarter1' in when_value:
+                    when_value = 'q1'
+                elif 'q2' in when_value or 'quarter 2' in when_value or 'quarter2' in when_value:
+                    when_value = 'q2'
+                elif 'q3' in when_value or 'quarter 3' in when_value or 'quarter3' in when_value:
+                    when_value = 'q3'
+                elif 'q4' in when_value or 'quarter 4' in when_value or 'quarter4' in when_value:
+                    when_value = 'q4'
+                else:
+                    when_value = 'year'  # Default to full year if not matched
+                
                 # Create or update the section
                 # Note: we're generating a unique ID based on course and section number
                 section_id = f"{row['course_id']}_S{row['section_number']}"
@@ -246,6 +269,7 @@ class CSVUploadView(View):
                         'room': room,
                         'period': period,
                         'students': '',  # Empty initially, students will be assigned later
+                        'when': when_value,
                     }
                 )
             except (Course.DoesNotExist, Teacher.DoesNotExist, Period.DoesNotExist, Room.DoesNotExist) as e:
@@ -458,10 +482,11 @@ def download_template_csv(request, template_type):
         writer.writerow(['P001', '08:00', '08:45'])
         writer.writerow(['P002', '08:50', '09:35'])
     elif template_type == 'sections':
-        writer.writerow(['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size'])
+        writer.writerow(['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when'])
         # Add a sample row
-        writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '30'])
-        writer.writerow(['C001', '2', 'T002', 'P003', 'R002', '25'])
+        writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '30', 'year'])
+        writer.writerow(['C001', '2', 'T002', 'P003', 'R002', '25', 't1'])
+        writer.writerow(['C002', '1', 'T003', 'P002', 'R003', '28', 'q2'])
     
     return response
 

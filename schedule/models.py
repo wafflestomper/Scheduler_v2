@@ -89,12 +89,25 @@ class Period(models.Model):
         return f"{self.get_day_display()} Period {self.slot} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
 
 class Section(models.Model):
+    WHEN_CHOICES = [
+        ('year', 'Full Year'),
+        ('t1', 'Trimester 1'),
+        ('t2', 'Trimester 2'),
+        ('t3', 'Trimester 3'),
+        ('q1', 'Quarter 1'),
+        ('q2', 'Quarter 2'),
+        ('q3', 'Quarter 3'),
+        ('q4', 'Quarter 4'),
+    ]
+    
     id = models.CharField(max_length=50, primary_key=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     period = models.ForeignKey(Period, on_delete=models.CASCADE)
     students = models.TextField(blank=True, help_text="Format: 'S001|S002'")
+    when = models.CharField(max_length=10, choices=WHEN_CHOICES, default='year', 
+                          help_text="When this section is scheduled (year, trimester, quarter)")
     
     class Meta:
         unique_together = [

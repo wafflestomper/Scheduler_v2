@@ -32,6 +32,6 @@ class PeriodAdmin(admin.ModelAdmin):
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'course', 'teacher', 'room', 'period')
+    list_display = ('id', 'course', 'teacher', 'room', 'period', 'when')
     search_fields = ('course__name', 'teacher__name', 'room__number')
-    list_filter = ('course__type', 'teacher', 'room', 'period')
+    list_filter = ('course__type', 'teacher', 'room', 'period', 'when')
