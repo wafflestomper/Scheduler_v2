@@ -191,3 +191,31 @@ class CourseGroup(models.Model):
     
     def get_courses_count(self):
         return self.courses.count()
+
+class TrimesterCourseGroup(models.Model):
+    """
+    Groups trimester courses that need to be scheduled in a specific way:
+    - Each student takes exactly one course from each group
+    - All selected courses must be in different trimesters
+    - All selected courses must be in the same period
+    """
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    
+    GROUP_TYPES = [
+        ('required_pair', 'Required Pair'),
+        ('elective', 'Elective Options'),
+    ]
+    group_type = models.CharField(max_length=20, choices=GROUP_TYPES)
+    
+    courses = models.ManyToManyField(Course, related_name='trimester_groups')
+    preferred_period = models.ForeignKey(Period, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_group_type_display()})"
+    
+    def get_courses_count(self):
+        return self.courses.count()

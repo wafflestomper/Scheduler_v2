@@ -1,0 +1,146 @@
+{% extends 'schedule/base.html' %}
+{% load schedule_extras %}
+
+{% block title %}Assign Trimester Courses{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Assign Trimester Courses</h1>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Assignment Form</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Assign a 6th grade student to trimester course sections. Each student will take one course from each group,
+                        with each course in a different trimester but all in the same period.
+                    </p>
+                    
+                    <form method="post" class="mt-3">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="id_student" class="form-label">{{ form.student.label }}</label>
+                            {{ form.student|add_class:"form-select" }}
+                            <div class="form-text text-muted">
+                                Select a 6th grade student to assign
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.group_selections.label }}</label>
+                            <div class="border p-3 rounded">
+                                {% for choice in form.group_selections %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text text-muted">
+                                Optional: Select specific groups to include (default: all groups)
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_preferred_period" class="form-label">{{ form.preferred_period.label }}</label>
+                            {{ form.preferred_period|add_class:"form-select" }}
+                            <div class="form-text text-muted">
+                                Optional: Select a preferred period for scheduling these courses
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Assign Courses</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Students with Conflicts</h5>
+                </div>
+                <div class="card-body">
+                    {% if students_with_conflicts %}
+                        <div class="list-group">
+                            {% for item in students_with_conflicts %}
+                                <div class="list-group-item">
+                                    <h6 class="mb-1">{{ item.student.name }}</h6>
+                                    <ul class="mb-1 text-danger">
+                                        {% for conflict in item.conflicts %}
+                                            <li>{{ conflict }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <a href="{% url 'view_student_schedule' student_id=item.student.id %}" class="btn btn-sm btn-outline-primary">
+                                        View Schedule
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-success">No students with trimester course conflicts!</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Trimester Course Groups</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Group Name</th>
+                                    <th>Type</th>
+                                    <th>Courses</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for group in group_summary %}
+                                <tr>
+                                    <td>{{ group.name }}</td>
+                                    <td>{{ group.type }}</td>
+                                    <td>{{ group.courses|join:", " }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No trimester groups configured</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Trimester Course Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>Each student must take one course from each trimester group.</li>
+                        <li>The courses must be scheduled in different trimesters (t1, t2, t3).</li>
+                        <li>All courses for a student must be scheduled in the same period.</li>
+                        <li>6th grade trimester groups:
+                            <ul>
+                                <li>Group 1: WH6 and HW6 (World History pair)</li>
+                                <li>Group 2: CTA6 and TAC6 (Computer/Technology pair)</li>
+                                <li>Group 3: WW6, Art6, Mus6 (Arts elective options)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

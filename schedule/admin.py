@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Teacher, Room, Student, Course, Period, Section, Enrollment, CourseEnrollment, CourseGroup
+from .models import (
+    Teacher, Room, Student, Course, Period, 
+    Section, Enrollment, CourseEnrollment, CourseGroup,
+    TrimesterCourseGroup
+)
 
 @admin.register(Teacher)
 class TeacherAdmin(admin.ModelAdmin):
@@ -15,41 +19,48 @@ class RoomAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'grade_level')
-    search_fields = ('id', 'name')
+    list_display = ('id', 'name', 'grade_level', 'preferences')
+    search_fields = ('id', 'name', 'preferences')
     list_filter = ('grade_level',)
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'type', 'grade_level', 'max_students')
+    list_display = ('id', 'name', 'type', 'grade_level', 'max_students', 'duration')
     search_fields = ('id', 'name')
-    list_filter = ('type', 'grade_level')
+    list_filter = ('type', 'grade_level', 'duration')
 
 @admin.register(Period)
 class PeriodAdmin(admin.ModelAdmin):
     list_display = ('id', 'period_name', 'days', 'slot', 'start_time', 'end_time')
-    list_filter = ('slot',)
+    search_fields = ('id', 'period_name', 'days', 'slot')
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'course', 'teacher', 'room', 'period', 'when')
-    search_fields = ('course__name', 'teacher__name', 'room__number')
-    list_filter = ('course__type', 'teacher', 'room', 'period', 'when')
+    list_display = ('id', 'course', 'section_number', 'teacher', 'period', 'room', 'when')
+    search_fields = ('id', 'course__name', 'teacher__name', 'room__number')
+    list_filter = ('when',)
 
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ('student', 'section', 'date_enrolled')
     search_fields = ('student__name', 'section__course__name')
-    list_filter = ('section__course__type', 'date_enrolled')
+    list_filter = ('date_enrolled',)
 
 @admin.register(CourseEnrollment)
 class CourseEnrollmentAdmin(admin.ModelAdmin):
     list_display = ('student', 'course', 'date_enrolled')
     search_fields = ('student__name', 'course__name')
-    list_filter = ('course__type', 'date_enrolled')
+    list_filter = ('date_enrolled',)
 
 @admin.register(CourseGroup)
 class CourseGroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'get_courses_count', 'preferred_period')
+    list_display = ('name', 'description', 'preferred_period', 'get_courses_count')
+    search_fields = ('name', 'description')
+    filter_horizontal = ('courses',)
+
+@admin.register(TrimesterCourseGroup)
+class TrimesterCourseGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'group_type', 'description', 'preferred_period', 'get_courses_count')
+    list_filter = ('group_type',)
     search_fields = ('name', 'description')
     filter_horizontal = ('courses',)

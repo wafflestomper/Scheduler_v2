@@ -75,4 +75,53 @@ class LanguageCourseForm(forms.Form):
             ('', '-- No preference --')
         ] + [
             (p.id, str(p)) for p in Period.objects.all().order_by('slot')
+        ]
+
+class TrimesterCourseForm(forms.Form):
+    """Form for trimester course assignment"""
+    student = forms.CharField(
+        widget=forms.Select,
+        label="Student"
+    )
+    group_selections = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        label="Group Selections",
+        required=False
+    )
+    preferred_period = forms.CharField(
+        widget=forms.Select,
+        label="Preferred Period",
+        required=False
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Get 6th grade students
+        self.fields['student'].widget.choices = [
+            (s.id, s.name) for s in Student.objects.filter(
+                grade_level=6
+            ).distinct().order_by('name')
+        ]
+        
+        # Get trimester course groups
+        from schedule.models import TrimesterCourseGroup
+        groups = TrimesterCourseGroup.objects.all().prefetch_related('courses')
+        
+        # Format group selection choices
+        group_choices = []
+        for group in groups:
+            courses = ", ".join([c.id for c in group.courses.all()])
+            group_choices.append((
+                group.id,
+                f"{group.name} ({courses})"
+            ))
+        
+        self.fields['group_selections'].choices = group_choices
+        
+        # Get periods
+        self.fields['preferred_period'].widget.choices = [
+            ('', '-- No preference --')
+        ] + [
+            (p.id, str(p)) for p in Period.objects.all().order_by('slot')
         ] 

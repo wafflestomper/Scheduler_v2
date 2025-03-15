@@ -3,14 +3,15 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib import messages
 
-from schedule.models import Student, Section, Course, CourseEnrollment, Enrollment
-from schedule.forms import LanguageCourseForm
+from schedule.models import Student, Section, Course, CourseEnrollment, Enrollment, TrimesterCourseGroup
+from schedule.forms import LanguageCourseForm, TrimesterCourseForm
 from schedule.utils.section_registration_utils import (
     get_section_stats, get_course_enrollment_stats,
     get_unassigned_students_count, deregister_sections
 )
 from schedule.utils.balance_assignment import perfect_balance_assignment
 from schedule.utils.language_course_utils import assign_language_courses, get_language_course_conflicts
+from schedule.utils.trimester_course_utils import assign_trimester_courses, get_trimester_course_conflicts
 
 def registration_home(request):
     """
@@ -147,4 +148,83 @@ def assign_language_course_sections(request):
         'students_with_conflicts': students_with_conflicts
     }
     
-    return render(request, 'schedule/assign_language_courses.html', context) 
+    return render(request, 'schedule/assign_language_courses.html', context)
+
+def assign_trimester_course_sections(request):
+    """
+    View for manually assigning trimester courses for 6th grade students
+    Ensures each student takes one course from each group in a different trimester
+    but during the same period.
+    """
+    if request.method == 'POST':
+        form = TrimesterCourseForm(request.POST)
+        if form.is_valid():
+            student_id = form.cleaned_data['student']
+            student = Student.objects.get(id=student_id)
+            
+            # Get selected groups and period
+            group_ids = form.cleaned_data['group_selections']
+            preferred_period_id = form.cleaned_data['preferred_period']
+            
+            preferred_period = None
+            if preferred_period_id:
+                from schedule.models import Period
+                preferred_period = Period.objects.get(id=preferred_period_id)
+            
+            # Perform the assignment
+            success, message, assignments = assign_trimester_courses(student, group_ids, preferred_period)
+            
+            if success:
+                messages.success(request, f"Successfully assigned trimester courses for {student.name}: {message}")
+                # Redirect to student schedule view
+                return redirect('view_student_schedule', student_id=student_id)
+            else:
+                messages.error(request, f"Error assigning trimester courses for {student.name}: {message}")
+    else:
+        form = TrimesterCourseForm()
+    
+    # List students with trimester course conflicts
+    students_with_conflicts = []
+    
+    # Get all 6th grade students
+    students = Student.objects.filter(grade_level=6).distinct()
+    
+    # Get all trimester course groups
+    trimester_groups = TrimesterCourseGroup.objects.all().prefetch_related('courses')
+    all_trimester_courses = []
+    for group in trimester_groups:
+        all_trimester_courses.extend(list(group.courses.all()))
+    
+    # Filter students to only those enrolled in trimester courses
+    enrolled_student_ids = CourseEnrollment.objects.filter(
+        course__in=all_trimester_courses
+    ).values_list('student_id', flat=True).distinct()
+    
+    students = students.filter(id__in=enrolled_student_ids)
+    
+    # Check for conflicts
+    for student in students:
+        conflicts = get_trimester_course_conflicts(student)
+        if conflicts:
+            students_with_conflicts.append({
+                'student': student,
+                'conflicts': conflicts
+            })
+    
+    # Get configuration summary
+    group_summary = []
+    for group in trimester_groups:
+        courses = [c.id for c in group.courses.all()]
+        group_summary.append({
+            'name': group.name,
+            'type': group.get_group_type_display(),
+            'courses': courses
+        })
+    
+    context = {
+        'form': form,
+        'students_with_conflicts': students_with_conflicts,
+        'group_summary': group_summary
+    }
+    
+    return render(request, 'schedule/assign_trimester_courses.html', context) 

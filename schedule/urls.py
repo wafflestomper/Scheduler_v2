@@ -33,7 +33,7 @@ from .views.enrollment_views import (
 )
 from .views.section_registration_views import (
     section_registration, registration_home, view_student_schedule,
-    perfect_balance_assignment, assign_language_course_sections
+    perfect_balance_assignment, assign_language_course_sections, assign_trimester_course_sections
 )
 
 urlpatterns = [
@@ -81,6 +81,7 @@ urlpatterns = [
     path('section-registration/student/<str:student_id>/', view_student_schedule, name='view_student_schedule'),
     path('api/section-registration/', section_registration, name='section_registration'),
     path('section-registration/language-courses/', assign_language_course_sections, name='assign_language_courses'),
+    path('section-registration/trimester-courses/', assign_trimester_course_sections, name='assign_trimester_courses'),
     
     # Course Groups
     path('course-groups/', course_groups, name='course_groups'),
