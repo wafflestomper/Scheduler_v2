@@ -1,0 +1,5 @@
+student_id,first_name,nickname,last_name,grade_level
+S001,John,Johnny,Doe,6
+S002,Jane,,Smith,7
+S003,Michael,Mike,Johnson,8
+S004,Emily,Em,Davis,6 

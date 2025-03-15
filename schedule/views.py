@@ -71,10 +71,15 @@ class CSVUploadView(View):
     
     def process_students(self, reader):
         for row in reader:
+            full_name = f"{row['first_name']}"
+            if row.get('nickname'):
+                full_name += f" '{row['nickname']}'"
+            full_name += f" {row['last_name']}"
+            
             Student.objects.update_or_create(
                 id=row['student_id'],
                 defaults={
-                    'name': f"{row['first_name']} {row.get('last_name', '')}",
+                    'name': full_name,
                     'grade_level': int(row['grade_level']),
                     'preferences': '',  # No longer using elective_prefs
                 }
@@ -117,13 +122,17 @@ class CSVUploadView(View):
     
     def process_periods(self, reader):
         for row in reader:
+            # Parse time strings to Django TimeField format
+            start_time = row['start_time']
+            end_time = row['end_time']
+            
             Period.objects.update_or_create(
                 id=row['period_id'],
                 defaults={
                     'day': 'M',  # Default to Monday since day is no longer in CSV
                     'slot': 1,   # Default to slot 1 since slot is no longer in CSV
-                    'start_time': row['start_time'],
-                    'end_time': row['end_time'],
+                    'start_time': start_time,
+                    'end_time': end_time,
                 }
             )
             

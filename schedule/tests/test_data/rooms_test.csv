@@ -1,0 +1,5 @@
+room_id,number,capacity,type
+R001,101,30,classroom
+R002,102,25,classroom
+R003,S1,20,lab
+R004,A1,15,art 

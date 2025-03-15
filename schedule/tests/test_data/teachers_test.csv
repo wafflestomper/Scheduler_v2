@@ -1,0 +1,5 @@
+teacher_id,first_name,last_name,availability,grade_level,subjects,gender
+T001,Sarah,Smith,M1-M6,6;7;8,Math|Science,F
+T002,Robert,Johnson,M1-M3;T1-T6,7;8,English|History,M
+T003,James,Williams,,6,Art|Music,M
+T004,Maria,Garcia,W1-W6;TH1-TH6,,,F 
