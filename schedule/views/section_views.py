@@ -41,7 +41,7 @@ def edit_section(request, section_id):
     # For GET request or if there was an error
     courses = Course.objects.all().order_by('name')
     teachers = Teacher.objects.all().order_by('name')
-    rooms = Room.objects.all().order_by('name')
+    rooms = Room.objects.all().order_by('number')
     periods = Period.objects.all().order_by('start_time')
     
     context = {
@@ -88,7 +88,7 @@ def export_master_schedule(request):
                     period.name,
                     section.course.name if section.course else '',
                     section.teacher.full_name if section.teacher else '',
-                    section.room.name if section.room else '',
+                    section.room.number if section.room else '',
                     student_count
                 ])
     
@@ -102,7 +102,7 @@ def export_master_schedule(request):
                 'Unassigned',
                 section.course.name if section.course else '',
                 section.teacher.full_name if section.teacher else '',
-                section.room.name if section.room else '',
+                section.room.number if section.room else '',
                 student_count
             ])
     
@@ -135,7 +135,7 @@ def master_schedule(request):
                 'id': section.id,
                 'course': section.course.name if section.course else "Unassigned",
                 'teacher': section.teacher.full_name if section.teacher else "Unassigned",
-                'room': section.room.name if section.room else "Unassigned",
+                'room': section.room.number if section.room else "Unassigned",
                 'student_count': section.student_set.count(),
             })
     
@@ -152,7 +152,7 @@ def master_schedule(request):
                 'id': section.id,
                 'course': section.course.name if section.course else "Unassigned",
                 'teacher': section.teacher.full_name if section.teacher else "Unassigned",
-                'room': section.room.name if section.room else "Unassigned",
+                'room': section.room.number if section.room else "Unassigned",
                 'student_count': section.student_set.count(),
             })
     
@@ -242,13 +242,13 @@ def find_schedule_conflicts():
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
                             'period': periods_with_sections[period_id].period.name,
-                            'room': periods_with_sections[period_id].room.name if periods_with_sections[period_id].room else "Unassigned"
+                            'room': periods_with_sections[period_id].room.number if periods_with_sections[period_id].room else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
                             'period': section.period.name,
-                            'room': section.room.name if section.room else "Unassigned"
+                            'room': section.room.number if section.room else "Unassigned"
                         }
                     ]
                 }
@@ -268,7 +268,7 @@ def find_schedule_conflicts():
                 # Conflict: Room assigned to multiple sections in the same period
                 conflict = {
                     'type': 'room',
-                    'description': f"Room {room.name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Room {room.number} assigned to multiple sections in period {section.period.name}",
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,

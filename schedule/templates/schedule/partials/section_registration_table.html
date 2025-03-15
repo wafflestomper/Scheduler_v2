@@ -29,7 +29,7 @@
                         </td>
                         <td>{{ stat.section.period.name|default:"Unassigned" }}</td>
                         <td>{{ stat.section.teacher.name|default:"Unassigned" }}</td>
-                        <td>{{ stat.section.room.name|default:"Unassigned" }}</td>
+                        <td>{{ stat.section.room.number|default:"Unassigned" }}</td>
                         <td class="text-center">{{ stat.enrolled_count }}</td>
                         <td class="text-center">{{ stat.capacity|default:"Unlimited" }}</td>
                         <td class="text-center">
