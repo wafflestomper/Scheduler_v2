@@ -230,7 +230,15 @@ class CSVUploadView(View):
             # Get the related objects
             try:
                 course = Course.objects.get(id=row['course_id'])
-                teacher = Teacher.objects.get(id=row['teacher'])
+                
+                # Make teacher optional
+                teacher = None
+                if row.get('teacher'):
+                    try:
+                        teacher = Teacher.objects.get(id=row['teacher'])
+                    except Teacher.DoesNotExist:
+                        raise ValidationError(f"Teacher with ID '{row['teacher']}' does not exist. Please add this teacher first or leave the field blank.")
+                
                 period = Period.objects.get(id=row['period'])
                 room = Room.objects.get(id=row['room'])
                 
@@ -272,10 +280,18 @@ class CSVUploadView(View):
                         'when': when_value,
                     }
                 )
-            except (Course.DoesNotExist, Teacher.DoesNotExist, Period.DoesNotExist, Room.DoesNotExist) as e:
-                # Raise a more descriptive error
-                entity_type = str(e).split('.')[0]
-                raise ValidationError(f"Invalid {entity_type} reference in section data: {str(e)}")
+            except Course.DoesNotExist:
+                raise ValidationError(f"Course with ID '{row['course_id']}' does not exist. Please add this course first.")
+            except Period.DoesNotExist:
+                raise ValidationError(f"Period with ID '{row['period']}' does not exist. Please add this period first.")
+            except Room.DoesNotExist:
+                raise ValidationError(f"Room with ID '{row['room']}' does not exist. Please add this room first.")
+            except ValidationError as e:
+                # Re-raise specific validation errors
+                raise e
+            except Exception as e:
+                # Handle other unexpected errors
+                raise ValidationError(f"Error processing section: {str(e)}")
 
 def schedule_generation(request):
     if request.method == 'POST':
@@ -483,10 +499,10 @@ def download_template_csv(request, template_type):
         writer.writerow(['P002', '08:50', '09:35'])
     elif template_type == 'sections':
         writer.writerow(['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when'])
-        # Add a sample row
+        # Add sample rows
         writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '30', 'year'])
         writer.writerow(['C001', '2', 'T002', 'P003', 'R002', '25', 't1'])
-        writer.writerow(['C002', '1', 'T003', 'P002', 'R003', '28', 'q2'])
+        writer.writerow(['C002', '1', '', 'P002', 'R003', '28', 'q2'])  # Example with no teacher
     
     return response
 

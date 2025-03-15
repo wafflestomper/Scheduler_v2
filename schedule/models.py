@@ -102,7 +102,7 @@ class Section(models.Model):
     
     id = models.CharField(max_length=50, primary_key=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     period = models.ForeignKey(Period, on_delete=models.CASCADE)
     students = models.TextField(blank=True, help_text="Format: 'S001|S002'")
