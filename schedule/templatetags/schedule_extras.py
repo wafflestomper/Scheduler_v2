@@ -17,4 +17,9 @@ def percentage(value, max_value):
 def startswith(text, starts):
     if isinstance(text, str):
         return text.startswith(starts)
-    return False 
+    return False
+
+@register.filter
+def add_class(field, css_class):
+    """Add a CSS class to a Django form field."""
+    return field.as_widget(attrs={"class": css_class}) 

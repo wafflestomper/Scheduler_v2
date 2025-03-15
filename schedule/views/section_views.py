@@ -359,4 +359,200 @@ def section_roster(request, course_id):
         'total_students': sum(len(roster['students']) for roster in section_rosters)
     }
     
-    return render(request, 'schedule/section_roster.html', context) 
+    return render(request, 'schedule/section_roster.html', context)
+
+
+def check_conflicts(request, section_id):
+    """Check conflicts for a specific section."""
+    section = get_object_or_404(Section, pk=section_id)
+    conflicts = []
+
+    # Check for teacher conflicts
+    if section.teacher and section.period:
+        teacher_conflicts = Section.objects.filter(
+            teacher=section.teacher,
+            period=section.period
+        ).exclude(id=section.id)
+        
+        if teacher_conflicts.exists():
+            for conflict in teacher_conflicts:
+                conflicts.append({
+                    'type': 'teacher',
+                    'message': f"Teacher {section.teacher.name} is already assigned to {conflict.course.name} section {conflict.section_number} during this period"
+                })
+    
+    # Check for room conflicts
+    if section.room and section.period:
+        room_conflicts = Section.objects.filter(
+            room=section.room,
+            period=section.period
+        ).exclude(id=section.id)
+        
+        if room_conflicts.exists():
+            for conflict in room_conflicts:
+                conflicts.append({
+                    'type': 'room',
+                    'message': f"Room {section.room.number} is already assigned to {conflict.course.name} section {conflict.section_number} during this period"
+                })
+    
+    # Check for student conflicts
+    student_conflicts = []
+    if section.period:
+        for student in section.students.all():
+            other_sections = student.sections.filter(period=section.period).exclude(id=section.id)
+            if other_sections.exists():
+                student_conflicts.append({
+                    'student': student.name,
+                    'conflicts': [f"{s.course.name} section {s.section_number}" for s in other_sections]
+                })
+    
+    if student_conflicts:
+        conflicts.append({
+            'type': 'student',
+            'message': "Some students have conflicts with this section",
+            'details': student_conflicts
+        })
+    
+    return JsonResponse({
+        'section_id': section.id,
+        'section_name': f"{section.course.name} section {section.section_number}",
+        'conflicts': conflicts,
+        'has_conflicts': len(conflicts) > 0
+    })
+
+
+def view_sections(request):
+    """View all sections."""
+    # Get all sections with related objects
+    sections = Section.objects.all().select_related('course', 'teacher', 'period', 'room')
+    
+    # Group sections by course for better organization
+    sections_by_course = {}
+    
+    for section in sections:
+        course_id = section.course.id if section.course else 'unassigned'
+        course_name = section.course.name if section.course else 'Unassigned'
+        
+        if course_id not in sections_by_course:
+            sections_by_course[course_id] = {
+                'course_name': course_name,
+                'sections': []
+            }
+        
+        # Add section details
+        sections_by_course[course_id]['sections'].append({
+            'id': section.id,
+            'section_number': section.section_number,
+            'teacher': section.teacher.name if section.teacher else 'Unassigned',
+            'period': section.period.period_name if section.period else 'Unassigned',
+            'room': section.room.number if section.room else 'Unassigned',
+            'students_count': section.students.count(),
+            'when': section.when
+        })
+    
+    context = {
+        'sections_by_course': sections_by_course,
+        'total_sections': sections.count()
+    }
+    
+    return render(request, 'schedule/view_sections.html', context)
+
+
+def add_section(request):
+    """Add a new section."""
+    if request.method == 'POST':
+        course_id = request.POST.get('course')
+        teacher_id = request.POST.get('teacher')
+        period_id = request.POST.get('period')
+        room_id = request.POST.get('room')
+        section_number = request.POST.get('section_number')
+        max_size = request.POST.get('max_size')
+        when = request.POST.get('when')
+        
+        # Validate input
+        if not course_id:
+            messages.error(request, "Course is required")
+            return redirect('add_section')
+        
+        try:
+            section_number = int(section_number)
+        except (ValueError, TypeError):
+            messages.error(request, "Section number must be a valid integer")
+            return redirect('add_section')
+        
+        if max_size:
+            try:
+                max_size = int(max_size)
+                if max_size <= 0:
+                    raise ValueError()
+            except ValueError:
+                messages.error(request, "Max size must be a positive integer")
+                return redirect('add_section')
+        
+        # Get related objects
+        course = get_object_or_404(Course, id=course_id)
+        teacher = Teacher.objects.filter(id=teacher_id).first()
+        period = Period.objects.filter(id=period_id).first()
+        room = Room.objects.filter(id=room_id).first()
+        
+        # Generate a unique section ID
+        section_id = f"{course_id}_S{section_number}"
+        
+        # Check if this section ID already exists
+        if Section.objects.filter(id=section_id).exists():
+            messages.error(request, f"Section ID {section_id} already exists. Please use a different section number.")
+            return redirect('add_section')
+        
+        # Create the section
+        section = Section(
+            id=section_id,
+            course=course,
+            section_number=section_number,
+            teacher=teacher,
+            period=period,
+            room=room,
+            max_size=max_size,
+            when=when
+        )
+        
+        try:
+            section.save()
+            messages.success(request, f"Section {section_id} created successfully!")
+            return redirect('view_sections')
+        except Exception as e:
+            messages.error(request, f"Error creating section: {str(e)}")
+            return redirect('add_section')
+    
+    # For GET request, show the form
+    courses = Course.objects.all().order_by('name')
+    teachers = Teacher.objects.all().order_by('name')
+    periods = Period.objects.all().order_by('slot')
+    rooms = Room.objects.all().order_by('number')
+    
+    context = {
+        'courses': courses,
+        'teachers': teachers,
+        'periods': periods,
+        'rooms': rooms,
+        'when_choices': Section._meta.get_field('when').choices
+    }
+    
+    return render(request, 'schedule/add_section.html', context)
+
+
+def delete_section(request, section_id):
+    """Delete a section."""
+    section = get_object_or_404(Section, id=section_id)
+    
+    if request.method == 'POST':
+        # Check if there are any students enrolled in this section
+        if section.students.exists():
+            messages.error(request, f"Cannot delete section {section.id} because it has students enrolled.")
+            return redirect('view_sections')
+        
+        # Delete the section
+        section.delete()
+        messages.success(request, f"Section {section.id} deleted successfully!")
+        return redirect('view_sections')
+    
+    return render(request, 'schedule/delete_section_confirm.html', {'section': section}) 

@@ -1,0 +1,98 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}{{ student.name }}'s Schedule{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ student.name }}'s Schedule</h1>
+            <p class="lead">Grade {{ student.grade_level }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'registration_home' %}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Back to Registration
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Current Schedule</h5>
+                </div>
+                <div class="card-body">
+                    {% if enrollments %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Section</th>
+                                        <th>Period</th>
+                                        <th>Teacher</th>
+                                        <th>Room</th>
+                                        <th>When</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for enrollment in enrollments %}
+                                    <tr>
+                                        <td>{{ enrollment.section.course.name }}</td>
+                                        <td>{{ enrollment.section.section_number }}</td>
+                                        <td>{{ enrollment.section.period|default:"Unassigned" }}</td>
+                                        <td>{{ enrollment.section.teacher.name|default:"Unassigned" }}</td>
+                                        <td>{{ enrollment.section.room.number|default:"Unassigned" }}</td>
+                                        <td>{{ enrollment.section.get_when_display }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            This student is not currently enrolled in any sections.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if unassigned_courses %}
+            <div class="card mt-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Unassigned Courses</h5>
+                </div>
+                <div class="card-body">
+                    <p>The student is enrolled in these courses but not assigned to specific sections:</p>
+                    <ul class="list-group">
+                        {% for enrollment in unassigned_courses %}
+                        <li class="list-group-item">{{ enrollment.course.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'assign_language_courses' %}" class="btn btn-success">
+                            <i class="bi bi-translate"></i> Assign Language Courses
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %} 
