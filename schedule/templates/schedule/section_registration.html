@@ -303,13 +303,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Call the API
-        fetch('/api/assign-sections/', {
+        fetch('/api/section-registration/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify({
+                action: 'assign_sections',
+                ...requestData
+            })
         })
         .then(response => response.json())
         .then(data => {
@@ -434,13 +437,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Call the API
-        fetch('/api/deregister-all-sections/', {
+        fetch('/api/section-registration/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify(requestData)
+            body: JSON.stringify({
+                action: 'deregister_all_sections',
+                ...requestData
+            })
         })
         .then(response => response.json())
         .then(data => {

@@ -284,6 +284,36 @@ Enhanced the student enrollment management with a new course-based enrollment wo
 
 This new approach separates the course enrollment process from section assignment, allowing administrators to first enroll students in courses and later run an algorithm to place them in appropriate sections. This two-step process provides greater flexibility and enables future enhancements for optimizing section assignments.
 
+## May 3, 2023
+Implemented language course scheduling functionality. This new feature allows for specialized scheduling of language courses (SPA6, CHI6, FRE6) for 6th-grade students, ensuring that:
+1. Students take each language course in a different trimester
+2. All language courses are scheduled in the same period
+3. Section enrollments are balanced across available sections
+
+Key components:
+- Created `language_course_utils.py` with utility functions:
+  - `assign_language_courses`: Assigns language courses to students across different trimesters
+  - `get_language_course_conflicts`: Checks for conflicts in language course assignments
+  - `balance_language_course_sections`: Balances enrollments across language course sections
+- Added view `assign_language_course_sections` for handling assignments
+- Created template for language course assignment page
+- Added links to the feature in the registration and home pages
+- Added missing `registration_home` and `view_student_schedule` functions
+- Created student_schedule.html template for viewing individual schedules
+
+The implementation allows administrators to assign language courses manually while enforcing the constraint that each student takes each language course in a different trimester but during the same period across all language courses.
+
+## May 7, 2023
+Fixed the section registration AJAX calls that were causing errors with the "Assign All Students" and "Deregister All Section Assignments" buttons. The issue was caused by outdated API endpoint URLs in the JavaScript code that didn't match the current API structure.
+
+Specific changes:
+1. Updated the AJAX calls in section_registration.html to use the correct API endpoint
+2. Modified the section_registration view to handle the "assign_sections" and "deregister_all_sections" actions
+3. Consolidated the API functionality into a single endpoint to improve maintainability
+4. Added proper error handling for AJAX requests
+
+This fix ensures that administrators can properly assign students to sections and clear section assignments when needed.
+
 ## Next Steps
 
 ### UI Improvements

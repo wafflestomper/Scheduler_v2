@@ -10,9 +10,123 @@ from django.contrib import messages
 from django.urls import reverse
 from django import forms
 
+def registration_home(request):
+    """
+    Home page for the section registration system showing registration stats.
+    """
+    # Get all course enrollments that don't have section assignments
+    unassigned_enrollments = CourseEnrollment.objects.filter(
+        ~Q(student__sections__course=F('course'))
+    ).select_related('student', 'course')
+    
+    # Count unique students with unassigned enrollments
+    unassigned_students_count = unassigned_enrollments.values('student').distinct().count()
+    
+    # Get counts by course
+    course_enrollment_stats = CourseEnrollment.objects.values('course__id', 'course__name') \
+        .annotate(
+            total_enrolled=Count('student', distinct=True),
+            assigned_to_sections=Count('student', distinct=True, filter=Q(student__sections__course=F('course')))
+        ).order_by('course__name')
+    
+    # Calculate students needing assignment
+    for stats in course_enrollment_stats:
+        stats['needing_assignment'] = stats['total_enrolled'] - stats['assigned_to_sections']
+    
+    # Get all sections with their capacities and current enrollment counts
+    sections = Section.objects.all().select_related('course', 'period', 'teacher', 'room')
+    section_stats = []
+    
+    for section in sections:
+        enrolled_count = section.students.count()
+        remaining_capacity = section.max_size - enrolled_count if section.max_size else None
+        
+        section_stats.append({
+            'section': section,
+            'enrolled_count': enrolled_count,
+            'capacity': section.max_size,
+            'remaining_capacity': remaining_capacity
+        })
+    
+    context = {
+        'unassigned_students_count': unassigned_students_count,
+        'course_enrollment_stats': course_enrollment_stats,
+        'section_stats': section_stats
+    }
+    
+    return render(request, 'schedule/section_registration.html', context)
+
+def view_student_schedule(request, student_id):
+    """
+    View a specific student's schedule
+    """
+    student = Student.objects.get(id=student_id)
+    
+    # Get the student's current section assignments
+    enrollments = Enrollment.objects.filter(
+        student=student
+    ).select_related('section', 'section__course', 'section__period', 'section__teacher', 'section__room')
+    
+    # Get courses the student is enrolled in but not assigned to sections
+    unassigned_courses = CourseEnrollment.objects.filter(
+        student=student
+    ).exclude(
+        course__in=[enrollment.section.course for enrollment in enrollments]
+    ).select_related('course')
+    
+    context = {
+        'student': student,
+        'enrollments': enrollments,
+        'unassigned_courses': unassigned_courses
+    }
+    
+    return render(request, 'schedule/student_schedule.html', context)
+
 def section_registration(request):
     """View for managing section registration for enrolled students"""
     print("DEBUG: section_registration view was called!")
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.body else {}
+            action = data.get('action')
+            
+            if action == 'assign_sections':
+                course_id = data.get('course_id')  # Optional: assign for a specific course only
+                # Call the balancing algorithm
+                results = perfect_balance_assignment(course_id)
+                return JsonResponse(results)
+                
+            elif action == 'deregister_all_sections':
+                course_id = data.get('course_id')  # Optional: deregister for a specific course only
+                grade_level = data.get('grade_level')  # Optional: deregister for a specific grade only
+                
+                with transaction.atomic():
+                    # Build the query based on filters
+                    query = Q()
+                    
+                    if course_id:
+                        query &= Q(section__course_id=course_id)
+                    
+                    if grade_level:
+                        query &= Q(student__grade_level=grade_level)
+                    
+                    # Count enrollments before deletion for reporting
+                    enrollment_count = Enrollment.objects.filter(query).count()
+                    
+                    # Delete the enrollments
+                    Enrollment.objects.filter(query).delete()
+                    
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': f'Successfully deregistered {enrollment_count} section assignments',
+                        'deregistered_count': enrollment_count
+                    })
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Invalid action'})
+                
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
     
     # Get all course enrollments that don't have section assignments
     unassigned_enrollments = CourseEnrollment.objects.filter(
@@ -444,7 +558,7 @@ def assign_language_course_sections(request):
     
     # Get all students enrolled in language courses
     students = Student.objects.filter(
-        courseenrollment__course__type='language'
+        course_enrollments__course__type='language'
     ).distinct()
     
     for student in students:
@@ -484,7 +598,7 @@ class LanguageCourseForm(forms.Form):
         # Get students who are enrolled in language courses
         self.fields['student'].widget.choices = [
             (s.id, s.name) for s in Student.objects.filter(
-                courseenrollment__course__type='language'
+                course_enrollments__course__type='language'
             ).distinct().order_by('name')
         ]
         
