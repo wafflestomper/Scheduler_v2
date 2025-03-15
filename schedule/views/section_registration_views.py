@@ -21,8 +21,8 @@ def section_registration(request):
     # Get counts by course
     course_enrollment_stats = CourseEnrollment.objects.values('course__id', 'course__name') \
         .annotate(
-            total_enrolled=Count('id'),
-            assigned_to_sections=Count('student__sections__course', filter=Q(student__sections__course=F('course')))
+            total_enrolled=Count('student', distinct=True),
+            assigned_to_sections=Count('student', distinct=True, filter=Q(student__sections__course=F('course')))
         ).order_by('course__name')
     
     # Calculate students needing assignment
@@ -270,4 +270,39 @@ def find_alternate_section(student, course, exclude_period=None):
         # Randomize selection among available sections
         return random.choice(available_sections)
     
-    return None 
+    return None
+
+def deregister_all_sections(request):
+    """API endpoint to remove all students from their section assignments"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'})
+    
+    try:
+        data = json.loads(request.body) if request.body else {}
+        course_id = data.get('course_id')  # Optional: deregister for a specific course only
+        grade_level = data.get('grade_level')  # Optional: deregister for a specific grade only
+        
+        with transaction.atomic():
+            # Build the query based on filters
+            query = Q()
+            
+            if course_id:
+                query &= Q(section__course_id=course_id)
+            
+            if grade_level:
+                query &= Q(student__grade_level=grade_level)
+            
+            # Count enrollments before deletion for reporting
+            enrollment_count = Enrollment.objects.filter(query).count()
+            
+            # Delete the enrollments
+            Enrollment.objects.filter(query).delete()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Successfully deregistered {enrollment_count} section assignments',
+                'deregistered_count': enrollment_count
+            })
+    
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}) 
