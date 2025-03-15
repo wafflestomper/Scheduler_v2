@@ -196,10 +196,12 @@ def course_groups(request):
     """View for managing course groups (related language courses)"""
     groups = CourseGroup.objects.all().prefetch_related('courses').order_by('name')
     periods = Period.objects.all().order_by('slot')
+    courses = Course.objects.all().order_by('grade_level', 'name')
     
     context = {
         'groups': groups,
-        'periods': periods
+        'periods': periods,
+        'courses': courses
     }
     
     return render(request, 'schedule/course_groups.html', context)
