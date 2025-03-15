@@ -24,6 +24,10 @@
                             <i class="bi bi-distribute-vertical"></i> Assign All Students to Sections
                         </button>
                         
+                        <button id="deregister-all-btn" class="btn btn-danger mb-3">
+                            <i class="bi bi-x-circle"></i> Deregister All Section Assignments
+                        </button>
+                        
                         <form id="course-registration-form">
                             <div class="mb-3">
                                 <label for="course-select" class="form-label">Or select a specific course:</label>
@@ -196,6 +200,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const runRegistrationBtn = document.getElementById('run-registration-btn');
     const runCourseRegistrationBtn = document.getElementById('run-course-registration-btn');
+    const deregisterAllBtn = document.getElementById('deregister-all-btn');
     const courseSelect = document.getElementById('course-select');
     const courseRegisterBtns = document.querySelectorAll('.course-register-btn');
     const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
@@ -209,6 +214,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             assignSections();
+        });
+    }
+    
+    // Deregister all section assignments
+    if (deregisterAllBtn) {
+        deregisterAllBtn.addEventListener('click', function() {
+            if (!confirm('WARNING: This will remove ALL students from their assigned sections. This action cannot be undone. Are you sure you want to proceed?')) {
+                return;
+            }
+            
+            // Double-confirm for safety
+            if (!confirm('Please confirm again: All section assignments will be deleted, but course enrollments will remain intact.')) {
+                return;
+            }
+            
+            deregisterAllSections();
         });
     }
     
@@ -361,6 +382,88 @@ document.addEventListener('DOMContentLoaded', function() {
             if (runRegistrationBtn) runRegistrationBtn.disabled = false;
             if (runCourseRegistrationBtn) runCourseRegistrationBtn.disabled = false;
             courseRegisterBtns.forEach(btn => btn.disabled = false);
+            
+            // Show error
+            resultModalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>Error:</h5>
+                    <p>An unexpected error occurred: ${error.message}</p>
+                </div>
+            `;
+            resultModal.show();
+        });
+    }
+    
+    // Function to call the deregister all sections API
+    function deregisterAllSections(courseId = null) {
+        // Show loading state
+        document.body.style.cursor = 'wait';
+        
+        // Disable buttons
+        if (deregisterAllBtn) deregisterAllBtn.disabled = true;
+        
+        // Prepare request data
+        const requestData = {};
+        if (courseId) {
+            requestData.course_id = courseId;
+        }
+        
+        // Call the API
+        fetch('/api/deregister-all-sections/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (deregisterAllBtn) deregisterAllBtn.disabled = false;
+            
+            if (data.status === 'success') {
+                // Create results HTML
+                let resultsHtml = `
+                    <div class="alert alert-success">
+                        ${data.message}
+                    </div>
+                    
+                    <div class="row text-center mb-4">
+                        <div class="col-md-12">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Deregistered Section Assignments</h5>
+                                    <p class="display-4">${data.deregistered_count}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                resultModalBody.innerHTML = resultsHtml;
+                resultModal.show();
+                
+                // Reload page after 2 seconds to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                // Show error
+                resultModalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Error:</h5>
+                        <p>${data.message}</p>
+                    </div>
+                `;
+                resultModal.show();
+            }
+        })
+        .catch(error => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (deregisterAllBtn) deregisterAllBtn.disabled = false;
             
             // Show error
             resultModalBody.innerHTML = `
