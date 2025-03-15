@@ -94,7 +94,7 @@ def export_master_schedule(request):
         else:
             for section in period_sections:
                 # Count students in this section
-                student_count = section.student_set.count()
+                student_count = section.students.count()
                 
                 writer.writerow([
                     period.period_name,
@@ -108,7 +108,7 @@ def export_master_schedule(request):
     unassigned_sections = sections.filter(period__isnull=True)
     if unassigned_sections:
         for section in unassigned_sections:
-            student_count = section.student_set.count()
+            student_count = section.students.count()
             
             writer.writerow([
                 'Unassigned',
@@ -148,7 +148,7 @@ def master_schedule(request):
                 'course': section.course.name if section.course else "Unassigned",
                 'teacher': section.teacher.full_name if section.teacher else "Unassigned",
                 'room': section.room.number if section.room else "Unassigned",
-                'student_count': section.student_set.count(),
+                'student_count': section.students.count(),
             })
     
     # Add unassigned sections
@@ -165,7 +165,7 @@ def master_schedule(request):
                 'course': section.course.name if section.course else "Unassigned",
                 'teacher': section.teacher.full_name if section.teacher else "Unassigned",
                 'room': section.room.number if section.room else "Unassigned",
-                'student_count': section.student_set.count(),
+                'student_count': section.students.count(),
             })
     
     context = {
