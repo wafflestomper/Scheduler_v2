@@ -284,6 +284,50 @@ Enhanced the student enrollment management with a new course-based enrollment wo
 
 This new approach separates the course enrollment process from section assignment, allowing administrators to first enroll students in courses and later run an algorithm to place them in appropriate sections. This two-step process provides greater flexibility and enables future enhancements for optimizing section assignments.
 
+## 2023-05-24 Updates
+
+* Added a "Deregister All Section Assignments" button to section registration page
+* Implemented JavaScript functionality for the deregister button with confirmation dialogs
+* Fixed course enrollment statistics calculation to avoid double-counting students
+* Fixed error in conflict resolution by using proper string representation of period objects
+* Timestamp: May 24, 2023 - 4:30 PM
+
+## Next Steps
+* Implement the auto-assignment feature for student preferences
+* Add reporting capabilities for enrollment and scheduling status
+* Develop a teacher view for class rosters
+
+## 2025-03-15 20:30 - Implemented Course Enrollment System
+
+Enhanced the student enrollment management with a new course-based enrollment workflow:
+
+1. **Course Enrollment Model**:
+   - Created `CourseEnrollment` model to track student enrollment in courses without immediate section assignment
+   - Implemented unique constraints to prevent duplicate enrollments
+   - Set up proper relationships between students, courses, and sections
+
+2. **Course Enrollment Interface**:
+   - Developed a dedicated enrollment management page accessible via `/enroll-students/`
+   - Implemented filtering by grade level and course
+   - Added visual indicators for enrolled students
+   - Created a responsive, tabular interface showing enrollment statistics
+   - Added individual and batch enrollment capabilities
+   - Implemented automatic checkbox selection when filters are applied
+   - Added checkbox clearing after enrollment to improve user experience
+
+3. **Section Assignment Algorithm**:
+   - Added a separate algorithm for assigning enrolled students to sections
+   - Implemented capacity-aware section assignment
+   - Distributed students across sections based on available capacity
+   - Provided detailed feedback on assignment success and failures
+
+4. **API Endpoints**:
+   - Created `/api/enroll-student-to-course/` for individual enrollment/unenrollment
+   - Implemented `/api/batch-enroll-students/` for bulk enrollment operations
+   - Added `/api/assign-students-to-sections/` for running the section assignment algorithm
+
+This new approach separates the course enrollment process from section assignment, allowing administrators to first enroll students in courses and later run an algorithm to place them in appropriate sections. This two-step process provides greater flexibility and enables future enhancements for optimizing section assignments.
+
 ## Next Steps
 
 ### UI Improvements
