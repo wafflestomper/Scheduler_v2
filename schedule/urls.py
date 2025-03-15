@@ -32,7 +32,8 @@ from .views.enrollment_views import (
     batch_disenroll_students, assign_students_to_sections
 )
 from .views.section_registration_views import (
-    section_registration, assign_sections, deregister_all_sections
+    section_registration, registration_home, view_student_schedule,
+    perfect_balance_assignment, assign_language_course_sections
 )
 
 urlpatterns = [
@@ -76,9 +77,10 @@ urlpatterns = [
     path('api/assign-students-to-sections/', assign_students_to_sections, name='assign_students_to_sections'),
     
     # Section registration
-    path('section-registration/', section_registration, name='section_registration'),
-    path('api/assign-sections/', assign_sections, name='assign_sections'),
-    path('api/deregister-all-sections/', deregister_all_sections, name='deregister_all_sections'),
+    path('section-registration/', registration_home, name='registration_home'),
+    path('section-registration/student/<str:student_id>/', view_student_schedule, name='view_student_schedule'),
+    path('api/section-registration/', section_registration, name='section_registration'),
+    path('section-registration/language-courses/', assign_language_course_sections, name='assign_language_courses'),
     
     # Course Groups
     path('course-groups/', course_groups, name='course_groups'),

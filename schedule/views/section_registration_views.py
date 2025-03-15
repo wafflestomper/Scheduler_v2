@@ -1,10 +1,14 @@
 import json
 import random
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import Count, Q, F
 from schedule.models import Student, Course, Section, CourseEnrollment, Enrollment, Period, CourseGroup
+from schedule.utils.language_course_utils import assign_language_courses, get_language_course_conflicts
+from django.contrib import messages
+from django.urls import reverse
+from django import forms
 
 def section_registration(request):
     """View for managing section registration for enrolled students"""
@@ -405,4 +409,95 @@ def deregister_all_sections(request):
             })
     
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}) 
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+def assign_language_course_sections(request):
+    """
+    View for manually assigning language courses for students
+    Ensures each student takes each language course in a different trimester
+    but during the same period across all language courses.
+    """
+    if request.method == 'POST':
+        form = LanguageCourseForm(request.POST)
+        if form.is_valid():
+            student_id = form.cleaned_data['student']
+            student = Student.objects.get(id=student_id)
+            
+            # Get selected courses and period
+            language_courses = form.cleaned_data['courses']
+            preferred_period = form.cleaned_data['preferred_period']
+            
+            # Perform the assignment
+            success, message, assignments = assign_language_courses(student, language_courses, preferred_period)
+            
+            if success:
+                messages.success(request, f"Successfully assigned language courses for {student.name}: {message}")
+                # Redirect to student schedule view
+                return redirect('view_student_schedule', student_id=student_id)
+            else:
+                messages.error(request, f"Error assigning language courses for {student.name}: {message}")
+    else:
+        form = LanguageCourseForm()
+    
+    # List students with language course conflicts
+    students_with_conflicts = []
+    
+    # Get all students enrolled in language courses
+    students = Student.objects.filter(
+        courseenrollment__course__type='language'
+    ).distinct()
+    
+    for student in students:
+        conflicts = get_language_course_conflicts(student)
+        if conflicts:
+            students_with_conflicts.append({
+                'student': student,
+                'conflicts': conflicts
+            })
+    
+    context = {
+        'form': form,
+        'students_with_conflicts': students_with_conflicts
+    }
+    
+    return render(request, 'schedule/assign_language_courses.html', context)
+
+class LanguageCourseForm(forms.Form):
+    """Form for language course assignment"""
+    student = forms.CharField(
+        widget=forms.Select,
+        label="Student"
+    )
+    courses = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        label="Courses"
+    )
+    preferred_period = forms.CharField(
+        widget=forms.Select,
+        label="Preferred Period",
+        required=False
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Get students who are enrolled in language courses
+        self.fields['student'].widget.choices = [
+            (s.id, s.name) for s in Student.objects.filter(
+                courseenrollment__course__type='language'
+            ).distinct().order_by('name')
+        ]
+        
+        # Get language courses
+        self.fields['courses'].choices = [
+            (c.id, f"{c.name} - {c.id}") for c in Course.objects.filter(
+                type='language'
+            ).order_by('grade_level', 'name')
+        ]
+        
+        # Get periods
+        self.fields['preferred_period'].widget.choices = [
+            ('', '-- No preference --')
+        ] + [
+            (p.id, str(p)) for p in Period.objects.all().order_by('slot')
+        ] 

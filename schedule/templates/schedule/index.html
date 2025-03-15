@@ -15,7 +15,7 @@
         <span class="ms-2">Upload data and access downloadable templates</span>
     </div>
     <div class="row mt-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Upload Data</h5>
@@ -24,7 +24,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Generate Schedules</h5>
@@ -33,12 +33,21 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">View Schedules</h5>
                     <p class="card-text">Review and edit the master schedule or individual student schedules.</p>
                     <a href="{% url 'master_schedule' %}" class="btn btn-primary">View Master Schedule</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Language Courses</h5>
+                    <p class="card-text">Assign students to language courses across different trimesters.</p>
+                    <a href="{% url 'assign_language_courses' %}" class="btn btn-primary">Assign Languages</a>
                 </div>
             </div>
         </div>
