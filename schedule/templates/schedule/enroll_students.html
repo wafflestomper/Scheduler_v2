@@ -43,10 +43,6 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                        </div>
                     </form>
                 </div>
             </div>
@@ -217,6 +213,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const courseSelect = document.getElementById('course_id');
+    const gradeSelect = document.getElementById('grade');
     const filterForm = document.getElementById('filter-form');
     const enrollBtns = document.querySelectorAll('.enroll-btn');
     const unenrollBtns = document.querySelectorAll('.unenroll-btn');
@@ -225,6 +222,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('select-all');
     const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
     const responseModalBody = document.getElementById('responseModalBody');
+    
+    // Auto-submit form when grade or course selection changes
+    gradeSelect.addEventListener('change', function() {
+        filterForm.submit();
+    });
+    
+    courseSelect.addEventListener('change', function() {
+        filterForm.submit();
+    });
     
     // Auto-check all eligible checkboxes on page load if a course is selected
     if (window.location.search.includes('course_id=') && courseSelect.value) {
