@@ -306,4 +306,15 @@ This new approach separates the course enrollment process from section assignmen
 - Configure PostgreSQL for production use
 - Set up proper environment variables
 - Add user authentication for admin functions
-- Create a deployment guide 
+- Create a deployment guide
+
+### 2023-05-25 15:30
+- Implemented language course groups feature for scheduling related trimester courses
+  - Added CourseGroup model to group related language courses (SPA6, CHI6, FRE6)
+  - Enhanced section assignment algorithm to respect course group constraints
+  - Created course group management interface for creating and editing groups
+  - Ensured students enrolled in all courses of a group get assigned to sections with the same period but different trimesters
+  - Added admin interface for managing course groups
+  - Tested functionality with real language courses and verified correct assignments
+
+## Next Steps 
