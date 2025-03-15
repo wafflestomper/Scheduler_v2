@@ -13,24 +13,36 @@ def edit_section(request, section_id):
     section = get_object_or_404(Section, pk=section_id)
     
     if request.method == 'POST':
-        course_id = request.POST.get('course')
-        teacher_id = request.POST.get('teacher')
-        room_id = request.POST.get('room')
-        period_id = request.POST.get('period')
+        teacher_id = request.POST.get('teacher_id')
+        room_id = request.POST.get('room_id')
+        period_id = request.POST.get('period_id')
+        max_size = request.POST.get('max_size')
         
         # Validate and get related objects
-        course = get_object_or_404(Course, pk=course_id) if course_id else None
         teacher = get_object_or_404(Teacher, pk=teacher_id) if teacher_id else None
         room = get_object_or_404(Room, pk=room_id) if room_id else None
         period = get_object_or_404(Period, pk=period_id) if period_id else None
         
+        # Validate max_size
+        if max_size:
+            try:
+                max_size = int(max_size)
+                if max_size <= 0:
+                    messages.error(request, "Max size must be a positive integer")
+                    return redirect('edit_section', section_id=section_id)
+            except ValueError:
+                messages.error(request, "Max size must be a valid number")
+                return redirect('edit_section', section_id=section_id)
+        else:
+            max_size = None
+        
         # Update section
         try:
             with transaction.atomic():
-                section.course = course
                 section.teacher = teacher
                 section.room = room
                 section.period = period
+                section.max_size = max_size
                 section.save()
                 
                 messages.success(request, f"Section updated successfully!")
