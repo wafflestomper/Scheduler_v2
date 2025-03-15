@@ -361,10 +361,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultModalBody.innerHTML = resultsHtml;
                 resultModal.show();
                 
-                // Reload page after 2 seconds to show updated data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
+                // Only auto-reload if there are no unresolvable conflicts or errors
+                if (data.unresolvable_conflicts === 0 && (!data.errors || data.errors.length === 0)) {
+                    // Reload page after 2 seconds to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
             } else {
                 // Show error
                 resultModalBody.innerHTML = `
@@ -445,10 +448,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultModalBody.innerHTML = resultsHtml;
                 resultModal.show();
                 
-                // Reload page after 2 seconds to show updated data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
+                // Only auto-reload if there are no errors in the deregistration process
+                if (!data.errors || data.errors.length === 0) {
+                    // Reload page after 2 seconds to show updated data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
             } else {
                 // Show error
                 resultModalBody.innerHTML = `
