@@ -164,29 +164,56 @@ def master_schedule(request):
 
 
 def student_schedules(request):
-    """View all student schedules."""
-    students = Student.objects.all().order_by('last_name', 'first_name')
+    """View student schedules."""
+    student_id = request.GET.get('student_id')
     
-    # Filter by grade level if specified
-    grade_filter = request.GET.get('grade')
-    if grade_filter:
-        try:
-            grade_filter = int(grade_filter)
-            students = students.filter(grade=grade_filter)
-        except (ValueError, TypeError):
-            # Invalid grade filter, ignore it
-            pass
-    
-    # Get unique grade levels for filter dropdown
-    grade_levels = Student.objects.values_list('grade', flat=True).distinct().order_by('grade')
-    
-    context = {
-        'students': students,
-        'grade_levels': grade_levels,
-        'current_grade_filter': grade_filter
-    }
-    
-    return render(request, 'schedule/sections/student_schedules.html', context)
+    if student_id:
+        # View a specific student's schedule
+        student = get_object_or_404(Student, pk=student_id)
+        sections = student.sections.all().select_related('course', 'period', 'teacher', 'room')
+        
+        # Group sections by period for display
+        schedule = {}
+        for section in sections:
+            if not section.period:
+                continue
+            
+            period_id = section.period.id
+            if period_id not in schedule:
+                schedule[period_id] = {
+                    'period': section.period,
+                    'sections': []
+                }
+            
+            schedule[period_id]['sections'].append(section)
+        
+        # Sort periods by time
+        sorted_schedule = {}
+        for period_id in sorted(schedule.keys()):
+            sorted_schedule[period_id] = schedule[period_id]
+        
+        return render(request, 'schedule/student_schedules.html', {
+            'student': student,
+            'schedule': sorted_schedule,
+            'section_count': sections.count()
+        })
+    else:
+        # List all students with their section counts
+        students = Student.objects.all().order_by('name')
+        
+        # Get counts of sections for each student
+        students_with_counts = []
+        for student in students:
+            section_count = student.sections.count()
+            students_with_counts.append({
+                'student': student,
+                'section_count': section_count
+            })
+        
+        return render(request, 'schedule/student_schedules.html', {
+            'students_with_counts': students_with_counts,
+            'total_students': len(students_with_counts)
+        })
 
 
 def find_schedule_conflicts():

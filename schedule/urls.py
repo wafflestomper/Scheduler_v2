@@ -27,7 +27,11 @@ from .views.import_export_views import (
     CSVUploadView, download_template_csv
 )
 from .views.enrollment_views import (
-    enroll_students, enroll_student_to_course, batch_enroll_students, assign_students_to_sections, batch_disenroll_students
+    enroll_students, enroll_student_to_course, batch_enroll_students, 
+    batch_disenroll_students, assign_students_to_sections
+)
+from .views.section_registration_views import (
+    section_registration, assign_sections
 )
 
 urlpatterns = [
@@ -69,4 +73,8 @@ urlpatterns = [
     path('api/batch-enroll-students/', batch_enroll_students, name='batch_enroll_students'),
     path('api/batch-disenroll-students/', batch_disenroll_students, name='batch_disenroll_students'),
     path('api/assign-students-to-sections/', assign_students_to_sections, name='assign_students_to_sections'),
+    
+    # Section registration
+    path('section-registration/', section_registration, name='section_registration'),
+    path('api/assign-sections/', assign_sections, name='assign_sections'),
 ] 

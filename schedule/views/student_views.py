@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 import csv
 from django.views import View
-from ..models import Student, Section, Enrollment, Period
+from ..models import Student, Section, Enrollment, Course
 from ..forms import StudentForm
 import json
-from django.db.models import Q
+from django.db.models import Q, Count
 
 
 def view_students(request):
@@ -60,6 +60,7 @@ def student_detail(request, student_id):
     student = get_object_or_404(Student, pk=student_id)
     
     # Get all periods for organizing the schedule
+    from ..models import Period
     periods = Period.objects.all().order_by('slot')
     
     # Get all sections this student is enrolled in
