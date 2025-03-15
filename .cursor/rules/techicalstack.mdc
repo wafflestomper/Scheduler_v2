@@ -11,3 +11,7 @@ alwaysApply: true
 - Elasticsearch for search, using elastic.co hosting
 - Elastic.co will have dev and prod indexes
 - Python tests
+
+#Additional info
+- After pushing to github, summarize the work that has been done and append it to file "progress_log.md" in the Scheduler_v2 directory.  Append below older material but above ## Next Steps. Include time stamp to appends.
+
