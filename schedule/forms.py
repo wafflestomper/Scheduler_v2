@@ -9,7 +9,14 @@ class CSVUploadForm(forms.Form):
     )
     
     data_type = forms.ChoiceField(
-        choices=[('students', 'Students'), ('teachers', 'Teachers'), ('rooms', 'Rooms'), ('courses', 'Courses'), ('periods', 'Periods'), ('sections', 'Sections')],
+        choices=[
+            ('courses', 'Courses'),
+            ('periods', 'Periods'),
+            ('rooms', 'Rooms'),
+            ('sections', 'Sections'),
+            ('students', 'Students'),
+            ('teachers', 'Teachers'),
+        ],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 

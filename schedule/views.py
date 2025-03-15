@@ -25,7 +25,10 @@ class CSVUploadView(View):
     template_name = 'schedule/csv_upload.html'
     
     def get(self, request):
-        form = CSVUploadForm()
+        # Get previously used data_type from session or use default
+        data_type = request.session.get('last_data_type', None)
+        initial_data = {'data_type': data_type} if data_type else {}
+        form = CSVUploadForm(initial=initial_data)
         return render(request, self.template_name, {'form': form})
     
     def post(self, request):
@@ -34,9 +37,12 @@ class CSVUploadView(View):
             csv_file = request.FILES['csv_file']
             data_type = form.cleaned_data['data_type']
             
+            # Store the data_type in session to remember it for next time
+            request.session['last_data_type'] = data_type
+            
             # Check if file is CSV
             if not csv_file.name.endswith('.csv'):
-                messages.error(request, 'File is not a CSV')
+                messages.error(request, 'File is not a CSV file. Please upload a file with .csv extension.')
                 return render(request, self.template_name, {'form': form})
             
             # Read the file
@@ -44,6 +50,20 @@ class CSVUploadView(View):
                 decoded_file = csv_file.read().decode('utf-8')
                 io_string = StringIO(decoded_file)
                 reader = csv.DictReader(io_string)
+                
+                # Validate CSV has headers
+                if not reader.fieldnames:
+                    raise ValueError("CSV file appears to be empty or has no headers")
+                
+                # Get expected headers based on data type
+                expected_headers = self.get_expected_headers(data_type)
+                
+                # Check if required headers are present
+                missing_headers = [header for header in expected_headers if header not in reader.fieldnames]
+                if missing_headers:
+                    error_msg = f"Missing required columns in CSV: {', '.join(missing_headers)}."
+                    error_msg += f" Expected columns: {', '.join(expected_headers)}."
+                    raise ValueError(error_msg)
                 
                 # Process based on data type
                 with transaction.atomic():
@@ -61,14 +81,43 @@ class CSVUploadView(View):
                         self.process_sections(reader)
                 
                 messages.success(request, f'Successfully processed {data_type} data')
+                # Redirect to same page but keep the form values
                 return redirect('csv_upload')
             
+            except UnicodeDecodeError:
+                messages.error(request, 'File encoding error. Please ensure your CSV file is UTF-8 encoded.')
+                return render(request, self.template_name, {'form': form})
+            except KeyError as e:
+                messages.error(request, f'Missing required column in CSV: {str(e)}. Please check the CSV format requirements below.')
+                return render(request, self.template_name, {'form': form})
+            except ValueError as e:
+                messages.error(request, f'CSV format error: {str(e)}')
+                return render(request, self.template_name, {'form': form})
+            except ValidationError as e:
+                messages.error(request, f'Validation error: {str(e)}')
+                return render(request, self.template_name, {'form': form})
             except Exception as e:
-                messages.error(request, f'Error processing CSV: {str(e)}')
+                messages.error(request, f'Error processing CSV: {str(e)}. Please check the format requirements below.')
                 return render(request, self.template_name, {'form': form})
         
         return render(request, self.template_name, {'form': form})
     
+    def get_expected_headers(self, data_type):
+        """Return expected CSV headers for each data type"""
+        if data_type == 'students':
+            return ['student_id', 'first_name', 'nickname', 'last_name', 'grade_level']
+        elif data_type == 'teachers':
+            return ['teacher_id', 'first_name', 'last_name']
+        elif data_type == 'rooms':
+            return ['room_id', 'number', 'capacity', 'type']
+        elif data_type == 'courses':
+            return ['course_id', 'name', 'course_type', 'grade_level', 'teachers', 'sections_needed', 'duration', 'max_size']
+        elif data_type == 'periods':
+            return ['period_id', 'start_time', 'end_time']
+        elif data_type == 'sections':
+            return ['course_id', 'section_number', 'teacher', 'period', 'room']
+        return []
+        
     def process_students(self, reader):
         for row in reader:
             full_name = f"{row['first_name']}"

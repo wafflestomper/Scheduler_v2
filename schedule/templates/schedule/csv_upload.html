@@ -8,6 +8,16 @@
         <h2>Upload CSV Data</h2>
     </div>
     <div class="card-body">
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="mb-3">
@@ -15,7 +25,7 @@
                 {{ form.data_type.errors }}
                 <select name="{{ form.data_type.name }}" id="id_data_type" class="form-select">
                     {% for value, display in form.data_type.field.choices %}
-                    <option value="{{ value }}">{{ display }}</option>
+                    <option value="{{ value }}" {% if form.data_type.value == value %}selected{% endif %}>{{ display }}</option>
                     {% endfor %}
                 </select>
             </div>
