@@ -321,7 +321,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>period_id,start_time,end_time</code></p>
+                                <p><code>period_id,period_name,start_time,end_time</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -329,6 +329,7 @@
                                         <thead>
                                             <tr>
                                                 <th>period_id</th>
+                                                <th>period_name</th>
                                                 <th>start_time</th>
                                                 <th>end_time</th>
                                             </tr>
@@ -336,11 +337,13 @@
                                         <tbody>
                                             <tr>
                                                 <td>P001</td>
+                                                <td>First Period</td>
                                                 <td>08:00</td>
                                                 <td>08:45</td>
                                             </tr>
                                             <tr>
                                                 <td>P002</td>
+                                                <td>Second Period</td>
                                                 <td>08:50</td>
                                                 <td>09:35</td>
                                             </tr>
@@ -479,7 +482,7 @@
                 </tr>
             </tbody>
         </table>
-        <a href="{% url 'download_csv_template' 'sections' %}" class="btn btn-primary">Download Template</a>
+        <a href="{% url 'download_template' 'sections' %}" class="btn btn-primary">Download Template</a>
     </div>
 </div>
 {% endblock %}

@@ -113,7 +113,7 @@ class CSVUploadView(View):
         elif data_type == 'courses':
             return ['course_id', 'name', 'course_type', 'grade_level', 'teachers', 'sections_needed', 'duration', 'max_size']
         elif data_type == 'periods':
-            return ['period_id', 'start_time', 'end_time']
+            return ['period_id', 'period_name', 'start_time', 'end_time']
         elif data_type == 'sections':
             return ['course_id', 'section_number', 'period']  # Only require course_id, section_number, and period
         return []
@@ -218,6 +218,7 @@ class CSVUploadView(View):
             Period.objects.update_or_create(
                 id=row['period_id'],
                 defaults={
+                    'period_name': row.get('period_name', ''),  # Get period_name if it exists, else empty string
                     'day': 'M',  # Default to Monday since day is no longer in CSV
                     'slot': 1,   # Default to slot 1 since slot is no longer in CSV
                     'start_time': start_time,
@@ -486,9 +487,28 @@ def download_template_csv(request, template_type):
     writer = csv.writer(response)
     
     # Write header row based on data type
-    headers = self.get_expected_headers(template_type)
-    
-    if template_type == 'sections':
+    if template_type == 'students':
+        headers = ['student_id', 'first_name', 'nickname', 'last_name', 'grade_level']
+        writer.writerow(headers)
+        writer.writerow(['S001', 'John', 'Johnny', 'Doe', '9'])
+    elif template_type == 'teachers':
+        headers = ['teacher_id', 'first_name', 'last_name']
+        writer.writerow(headers)
+        writer.writerow(['T001', 'Jane', 'Smith'])
+    elif template_type == 'rooms':
+        headers = ['room_id', 'number', 'capacity', 'type']
+        writer.writerow(headers)
+        writer.writerow(['R001', '101', '30', 'Classroom'])
+    elif template_type == 'courses':
+        headers = ['course_id', 'name', 'course_type', 'grade_level', 'teachers', 'sections_needed', 'duration', 'max_size']
+        writer.writerow(headers)
+        writer.writerow(['C001', 'Algebra I', 'Core', '9', 'T001,T002', '3', 'Semester', '30'])
+    elif template_type == 'periods':
+        headers = ['period_id', 'period_name', 'start_time', 'end_time']
+        writer.writerow(headers)
+        writer.writerow(['P001', 'First Period', '08:00', '08:50'])
+        writer.writerow(['P002', 'Second Period', '08:55', '09:45'])
+    elif template_type == 'sections':
         # For sections, show all possible fields in the template even though some are optional
         headers = ['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
         writer.writerow(headers)
@@ -496,21 +516,7 @@ def download_template_csv(request, template_type):
         # Add example rows
         writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '25', 'q1'])  # Complete example
         writer.writerow(['C002', '1', '', 'P002', '', '', 'q2'])  # Example with no teacher, room, or max_size
-    else:
-        writer.writerow(headers)
         
-        # Add example data rows for other types
-        if template_type == 'students':
-            writer.writerow(['S001', 'John', 'Johnny', 'Doe', '9'])
-        elif template_type == 'teachers':
-            writer.writerow(['T001', 'Jane', 'Smith'])
-        elif template_type == 'rooms':
-            writer.writerow(['R001', '101', '30', 'Classroom'])
-        elif template_type == 'courses':
-            writer.writerow(['C001', 'Algebra I', 'Core', '9', 'T001,T002', '3', 'Semester', '30'])
-        elif template_type == 'periods':
-            writer.writerow(['P001', '08:00', '08:50'])
-            
     return response
 
 def view_students(request):

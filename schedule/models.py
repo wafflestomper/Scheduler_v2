@@ -80,12 +80,15 @@ class Period(models.Model):
     ]
     
     id = models.CharField(max_length=10, primary_key=True)
+    period_name = models.CharField(max_length=50, blank=True, null=True, help_text="Descriptive name for this period")
     day = models.CharField(max_length=2, choices=DAY_CHOICES)
     slot = models.IntegerField(help_text="Period number (1-6)")
     start_time = models.TimeField()
     end_time = models.TimeField()
 
     def __str__(self):
+        if self.period_name:
+            return f"{self.period_name} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
         return f"{self.get_day_display()} Period {self.slot} ({self.start_time.strftime('%H:%M')}-{self.end_time.strftime('%H:%M')})"
 
 class Section(models.Model):
