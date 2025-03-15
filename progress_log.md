@@ -26,6 +26,12 @@
 - Added sample data CSV files for testing
 - Fixed missing import in views.py (redirect function)
 
+## 2023-03-15 - GitHub Repository Setup
+
+- Created remote GitHub repository at https://github.com/wafflestomper/Scheduler_v2.git
+- Pushed all code to GitHub for backup and version control
+- Added progress tracking log (this file)
+
 ## 2023-03-16 - Example New Entry
 
 - This is where new progress updates would be added
