@@ -1,0 +1,55 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Delete Section{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_sections' %}">Manage Sections</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Section</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2>Delete Section: {{ section.course.name }} - Section {{ section.section_number }}</h2>
+        </div>
+        <div class="card-body">
+            {% if section.students.exists %}
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Cannot Delete Section</h4>
+                    <p>This section currently has {{ section.students.count }} student(s) enrolled.</p>
+                    <p>You must unenroll these students first before deleting this section.</p>
+                </div>
+                <a href="{% url 'view_sections' %}" class="btn btn-primary">Return to Sections</a>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete the following section:</p>
+                    <ul>
+                        <li><strong>ID:</strong> {{ section.id }}</li>
+                        <li><strong>Course:</strong> {{ section.course.name }}</li>
+                        <li><strong>Section Number:</strong> {{ section.section_number }}</li>
+                        <li><strong>Teacher:</strong> {{ section.teacher.name|default:"Unassigned" }}</li>
+                        <li><strong>Room:</strong> {{ section.room.number|default:"Unassigned" }}</li>
+                        <li><strong>Period:</strong> {{ section.period|default:"Unassigned" }}</li>
+                        <li><strong>Max Size:</strong> {{ section.max_size|default:"Unlimited" }}</li>
+                        <li><strong>When:</strong> {{ section.when }}</li>
+                    </ul>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'view_sections' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Section</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
