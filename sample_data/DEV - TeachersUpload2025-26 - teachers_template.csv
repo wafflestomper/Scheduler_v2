@@ -1,0 +1,6 @@
+teacher_id,first_name,last_name,availability,grade_level,subjects,gender
+T001,Peter,Cross,,6,Math,M
+T002,Jon,Piper,,"6,8",History,M
+T003,Jer,Dunn,,6,Science,M
+T004,Keena,Fitch,,6,Science,F
+T005,Alex,Knight,,6,English,M

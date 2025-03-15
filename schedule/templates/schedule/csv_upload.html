@@ -232,7 +232,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>course_id,name,teachers,grade_level,duration,sections_needed</code></p>
+                                <p><code>course_id,name,course_type,teachers,grade_level,sections_needed,duration,max_size</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -241,28 +241,44 @@
                                             <tr>
                                                 <th>course_id</th>
                                                 <th>name</th>
+                                                <th>course_type</th>
                                                 <th>teachers</th>
                                                 <th>grade_level</th>
-                                                <th>duration</th>
                                                 <th>sections_needed</th>
+                                                <th>duration</th>
+                                                <th>max_size</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr>
                                                 <td>C001</td>
                                                 <td>Math 6</td>
+                                                <td>core</td>
                                                 <td>T001|T002</td>
                                                 <td>6</td>
-                                                <td>1</td>
                                                 <td>2</td>
+                                                <td>year</td>
+                                                <td>30</td>
                                             </tr>
                                             <tr>
                                                 <td>C002</td>
-                                                <td>Art</td>
+                                                <td>Spanish I</td>
+                                                <td>language</td>
                                                 <td>T003</td>
+                                                <td>7</td>
+                                                <td>1</td>
+                                                <td>year</td>
+                                                <td>25</td>
+                                            </tr>
+                                            <tr>
+                                                <td>C003</td>
+                                                <td>Art</td>
+                                                <td>elective</td>
+                                                <td>T004</td>
                                                 <td>0</td>
                                                 <td>1</td>
-                                                <td>1</td>
+                                                <td>trimester</td>
+                                                <td>28</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -270,10 +286,10 @@
                                 <div class="alert alert-info mt-2">
                                     <small>
                                         <strong>Note:</strong> Each course must have a unique ID starting with "C".
-                                        Teachers column is optional and should contain valid teacher IDs separated by pipe symbols (|).
-                                        Grade level of 0 means the course is available for all grades.
-                                        Duration is the number of periods the course takes (typically 1).
-                                        Sections_needed is the number of sections to create (optional).
+                                        <br>Course type should be one of: core, elective, required_elective, language (case insensitive).
+                                        <br>Duration should be one of: year, trimester, quarter (case insensitive).
+                                        <br>Grade level can be a specific grade (e.g., 6, 7, 8) or 0 for courses available to all grades.
+                                        <br>The teachers field should contain teacher IDs separated by pipe symbols (|).
                                     </small>
                                 </div>
                             </div>

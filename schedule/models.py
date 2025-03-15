@@ -46,6 +46,13 @@ class Course(models.Model):
         ('core', 'Core'),
         ('elective', 'Elective'),
         ('required_elective', 'Required Elective'),
+        ('language', 'Language'),
+    ]
+    
+    DURATION_TYPES = [
+        ('year', 'Year'),
+        ('trimester', 'Trimester'),
+        ('quarter', 'Quarter'),
     ]
     
     id = models.CharField(max_length=10, primary_key=True)
@@ -54,6 +61,8 @@ class Course(models.Model):
     grade_level = models.IntegerField()
     max_students = models.IntegerField()
     eligible_teachers = models.TextField(help_text="Format: 'T001|T002'")
+    duration = models.CharField(max_length=10, choices=DURATION_TYPES, default='year')
+    sections_needed = models.IntegerField(default=1)
 
     def __str__(self):
         return f"{self.name} ({self.get_type_display()}) - Grade {self.grade_level}"

@@ -109,14 +109,54 @@ class CSVUploadView(View):
     
     def process_courses(self, reader):
         for row in reader:
+            # Normalize course type - convert to lowercase and replace spaces with underscores
+            course_type = row.get('course_type', 'core').lower().strip()
+            # Map various forms to our standard values
+            if 'core' in course_type:
+                course_type = 'core'
+            elif 'required' in course_type and 'elective' in course_type:
+                course_type = 'required_elective'
+            elif 'elective' in course_type:
+                course_type = 'elective'
+            elif 'language' in course_type:
+                course_type = 'language'
+            else:
+                course_type = 'core'  # Default if not matched
+            
+            # Normalize duration - convert to lowercase and strip whitespace
+            duration = row.get('duration', 'year').lower().strip()
+            # Map various forms to our standard values
+            if 'year' in duration:
+                duration = 'year'
+            elif 'trimester' in duration:
+                duration = 'trimester'
+            elif 'quarter' in duration:
+                duration = 'quarter'
+            else:
+                duration = 'year'  # Default if not matched
+            
+            # Parse sections_needed, default to 1 if not provided or invalid
+            try:
+                sections_needed = int(row.get('sections_needed', 1))
+            except ValueError:
+                sections_needed = 1
+            
+            # Parse max_students, default to 30 if not provided or invalid
+            try:
+                max_students = int(row.get('max_size', 30))
+            except ValueError:
+                max_students = 30
+                
             Course.objects.update_or_create(
                 id=row['course_id'],
                 defaults={
                     'name': row['name'],
-                    'type': 'core',  # Default to core type since it's no longer in CSV
+                    'type': course_type,
                     'grade_level': int(row['grade_level']),
-                    'max_students': 30,  # Default value since it's no longer in CSV
+                    'max_students': max_students,
                     'eligible_teachers': row.get('teachers', ''),
+                    'duration': duration,
+                    'sections_needed': sections_needed,
                 }
             )
     
@@ -357,10 +397,12 @@ def download_template_csv(request, template_type):
         # Add a sample row
         writer.writerow(['R001', '101', '30', 'classroom'])
     elif template_type == 'courses':
-        writer.writerow(['course_id', 'name', 'teachers', 'grade_level', 'duration', 'sections_needed'])
-        # Add a sample row
-        writer.writerow(['C001', 'Math 6', 'T001|T002', '6', '1', '2'])
-        writer.writerow(['C002', 'Art', 'T003', '0', '1', '1'])
+        writer.writerow(['course_id', 'name', 'course_type', 'teachers', 'grade_level', 'sections_needed', 'duration', 'max_size'])
+        # Add sample rows
+        writer.writerow(['C001', 'Math 6', 'core', 'T001|T002', '6', '2', 'year', '30'])
+        writer.writerow(['C002', 'Art', 'elective', 'T003', '0', '1', 'trimester', '25'])
+        writer.writerow(['C003', 'Spanish I', 'language', 'T004', '7', '1', 'year', '28'])
+        writer.writerow(['C004', 'Physical Education', 'required_elective', 'T005|T006', '0', '3', 'quarter', '35'])
     elif template_type == 'periods':
         writer.writerow(['period_id', 'start_time', 'end_time'])
         # Add a sample row

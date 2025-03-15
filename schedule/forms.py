@@ -8,7 +8,7 @@ class CSVUploadForm(forms.Form):
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'})
     )
     
-    entity_type = forms.ChoiceField(
+    data_type = forms.ChoiceField(
         choices=[('students', 'Students'), ('teachers', 'Teachers'), ('rooms', 'Rooms'), ('courses', 'Courses'), ('periods', 'Periods'), ('sections', 'Sections')],
         widget=forms.Select(attrs={'class': 'form-select'})
     )
