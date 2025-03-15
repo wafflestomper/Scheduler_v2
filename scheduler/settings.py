@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'schedule',  # Our scheduling app
+    'rest_framework',  # Django REST framework
 ]
 
 MIDDLEWARE = [
