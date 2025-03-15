@@ -52,7 +52,7 @@ def edit_section(request, section_id):
         'periods': periods
     }
     
-    return render(request, 'schedule/sections/edit_section.html', context)
+    return render(request, 'schedule/edit_section.html', context)
 
 
 def get_conflicts(request):
