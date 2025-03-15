@@ -1,0 +1,96 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Student List - School Scheduler{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2>Student List</h2>
+            <span class="badge bg-primary">Total: {{ total_students }}</span>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" class="form-control" placeholder="Search by name" value="{{ search_query }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="grade" class="form-select">
+                            <option value="">All Grades</option>
+                            <option value="6" {% if grade_filter == '6' %}selected{% endif %}>Grade 6</option>
+                            <option value="7" {% if grade_filter == '7' %}selected{% endif %}>Grade 7</option>
+                            <option value="8" {% if grade_filter == '8' %}selected{% endif %}>Grade 8</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary me-2">Filter</button>
+                        <a href="{% url 'view_students' %}" class="btn btn-outline-secondary">Reset</a>
+                    </div>
+                </div>
+            </form>
+
+            {% if not students_by_grade %}
+            <div class="alert alert-info">
+                No students found. <a href="{% url 'csv_upload' %}">Upload students</a> to get started.
+            </div>
+            {% else %}
+                {% for grade in sorted_grades %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h3 class="h5 mb-0">Grade {{ grade }} <span class="badge bg-secondary">{{ students_by_grade|get_item:grade|length }} students</span></h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Grade</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in students_by_grade|get_item:grade %}
+                                    <tr>
+                                        <td>{{ student.id }}</td>
+                                        <td>{{ student.name }}</td>
+                                        <td>{{ student.grade_level }}</td>
+                                        <td class="text-end">
+                                            {% if student.id in scheduled_students %}
+                                            <a href="{% url 'student_schedules' %}?student_id={{ student.id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-calendar-week"></i> View Schedule
+                                            </a>
+                                            {% else %}
+                                            <span class="text-muted">No Schedule</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any needed JavaScript here
+});
+</script>
+{% endblock %} 

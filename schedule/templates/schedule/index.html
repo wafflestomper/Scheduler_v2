@@ -74,6 +74,13 @@
                         <span class="badge bg-primary rounded-pill">{{ num_sections }}</span>
                     </li>
                 </ul>
+                {% if num_students > 0 %}
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{% url 'view_students' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-people-fill"></i> View All Students
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

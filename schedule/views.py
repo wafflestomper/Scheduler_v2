@@ -374,6 +374,51 @@ def download_template_csv(request, template_type):
     
     return response
 
+def view_students(request):
+    """View all students in the database with filtering options."""
+    # Get query parameters for filtering
+    grade_filter = request.GET.get('grade', None)
+    search_query = request.GET.get('search', '')
+    
+    # Start with all students
+    students = Student.objects.all().order_by('grade_level', 'name')
+    
+    # Apply filters if provided
+    if grade_filter and grade_filter.isdigit():
+        students = students.filter(grade_level=int(grade_filter))
+    
+    if search_query:
+        students = students.filter(name__icontains=search_query)
+    
+    # Group by grade level for easier viewing
+    students_by_grade = {}
+    for student in students:
+        grade = student.grade_level
+        if grade not in students_by_grade:
+            students_by_grade[grade] = []
+        students_by_grade[grade].append(student)
+    
+    # Sort grades
+    sorted_grades = sorted(students_by_grade.keys())
+    
+    # Get students who have schedules
+    scheduled_students = set()
+    sections = Section.objects.all()
+    for section in sections:
+        for student_id in section.get_students_list():
+            scheduled_students.add(student_id)
+    
+    context = {
+        'students_by_grade': students_by_grade,
+        'sorted_grades': sorted_grades,
+        'grade_filter': grade_filter,
+        'search_query': search_query,
+        'total_students': students.count(),
+        'scheduled_students': scheduled_students,
+    }
+    
+    return render(request, 'schedule/view_students.html', context)
+
 # Helper functions for schedule generation
 def generate_schedules():
     """Generate schedules for all students using constraint solver"""
