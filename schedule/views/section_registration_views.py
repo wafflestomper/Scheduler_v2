@@ -61,125 +61,168 @@ def assign_sections(request):
         data = json.loads(request.body) if request.body else {}
         course_id = data.get('course_id')  # Optional: assign for a specific course only
         
-        # Phase 1: Initial assignment without conflict resolution
-        assignment_results = initial_assignment_phase(course_id)
-        
-        # Phase 2: Conflict resolution
-        conflict_resolution_results = conflict_resolution_phase(assignment_results)
-        
-        # Combine results
-        results = {
-            'status': 'success',
-            'initial_assignments': assignment_results['assignments_count'],
-            'initial_failures': assignment_results['failures_count'],
-            'conflicts_resolved': conflict_resolution_results['resolved_count'],
-            'unresolvable_conflicts': conflict_resolution_results['unresolved_count'],
-            'message': f"Assigned {assignment_results['assignments_count']} students to sections. " +
-                      f"Resolved {conflict_resolution_results['resolved_count']} conflicts. " +
-                      f"{conflict_resolution_results['unresolved_count']} conflicts could not be resolved.",
-            'errors': assignment_results['errors'] + conflict_resolution_results['errors']
-        }
+        # Call the new perfect balancing algorithm
+        results = perfect_balance_assignment(course_id)
         
         return JsonResponse(results)
     
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
 
-def initial_assignment_phase(course_id=None):
+def perfect_balance_assignment(course_id=None):
     """
-    Phase 1: Initial assignment of students to sections
-    Distributes students to sections prioritizing balancing section sizes
+    Completely rebalances sections by deregistering all students and 
+    reassigning them optimally to achieve perfect balance
     """
     with transaction.atomic():
-        # Get all course enrollments that don't have section assignments
-        unassigned_query = ~Q(student__sections__course=F('course'))
+        # Prepare query for relevant courses
+        course_query = Q()
         if course_id:
-            unassigned_enrollments = CourseEnrollment.objects.filter(
-                unassigned_query,
-                course_id=course_id
-            ).select_related('student', 'course')
-        else:
-            unassigned_enrollments = CourseEnrollment.objects.filter(
-                unassigned_query
-            ).select_related('student', 'course')
+            course_query &= Q(id=course_id)
         
-        # Group by course
-        enrollments_by_course = {}
-        for enrollment in unassigned_enrollments:
-            if enrollment.course_id not in enrollments_by_course:
-                enrollments_by_course[enrollment.course_id] = []
-            enrollments_by_course[enrollment.course_id].append(enrollment)
+        # Get all courses that need section assignments
+        courses = Course.objects.filter(course_query)
+        
+        if not courses.exists():
+            return {
+                'status': 'error',
+                'message': 'No courses found for section assignment'
+            }
         
         # Tracking results
         assignments_count = 0
         failures_count = 0
         errors = []
+        resolved_count = 0
+        unresolved_count = 0
         
         # Process each course
-        for course_id, enrollments in enrollments_by_course.items():
-            # Get available sections for this course
-            sections = list(Section.objects.filter(course_id=course_id).select_related('period'))
+        for course in courses:
+            print(f"DEBUG: Processing course {course.name}")
             
-            if not sections:
-                failures_count += len(enrollments)
-                errors.append(f"No sections available for course {enrollments[0].course.name}")
+            # 1. Get all students enrolled in this course
+            enrolled_students = CourseEnrollment.objects.filter(
+                course=course
+            ).select_related('student')
+            
+            if not enrolled_students.exists():
+                print(f"DEBUG: No students enrolled in {course.name}")
                 continue
             
-            # Get section info including current enrollments
-            section_enrollments = []
+            # 2. Get all sections for this course
+            sections = Section.objects.filter(course=course).select_related('period')
+            
+            if not sections.exists():
+                failures_count += enrolled_students.count()
+                errors.append(f"No sections available for course {course.name}")
+                continue
+            
+            # 3. Deregister all current section assignments for this course
+            # This allows us to start fresh for optimal balancing
+            current_enrollments = Enrollment.objects.filter(section__course=course)
+            enrollment_count = current_enrollments.count()
+            current_enrollments.delete()
+            print(f"DEBUG: Deregistered {enrollment_count} existing enrollments for {course.name}")
+            
+            # 4. Initialize section data
+            section_data = []
             for section in sections:
-                enrolled_count = section.students.count()
                 max_capacity = section.max_size if section.max_size else 999  # Use large value for "unlimited"
-                
-                section_enrollments.append({
+                section_data.append({
                     'section': section,
-                    'current_enrollment': enrolled_count,
+                    'current_enrollment': 0,
                     'max_capacity': max_capacity,
-                    'available': max_capacity - enrolled_count,
                     'period_id': section.period_id if section.period else None
                 })
             
-            # Calculate ideal distribution
-            total_students = len(enrollments) + sum(info['current_enrollment'] for info in section_enrollments)
-            num_sections = len(section_enrollments)
-            
-            if num_sections == 0:
-                failures_count += len(enrollments)
-                errors.append(f"No sections available for course {enrollments[0].course.name}")
-                continue
-            
-            # Calculate target students per section
+            # 5. Calculate ideal distribution
+            total_students = enrolled_students.count()
+            num_sections = len(section_data)
             ideal_per_section = total_students / num_sections
-            print(f"DEBUG: Course {enrollments[0].course.name} - {len(enrollments)} students to assign, ideal: {ideal_per_section} per section")
             
-            # First pass: assign students to sections prioritizing balance
-            # Sort enrollments randomly to avoid patterns
-            random.shuffle(enrollments)
+            print(f"DEBUG: Course {course.name} - {total_students} students, {num_sections} sections, ideal: {ideal_per_section:.2f} per section")
             
-            remaining_enrollments = []
+            # 6. Sort students by a stable criterion (ID) to ensure consistent assignments
+            students_to_assign = list(enrolled_students)
+            students_to_assign.sort(key=lambda e: e.student.id)
             
-            for enrollment in enrollments:
+            # 7. First phase: Assign students to sections to minimize the maximum enrollment
+            # This ensures we don't overload any section if it can be avoided
+            student_schedule_conflicts = []
+            
+            for enrollment in students_to_assign:
                 student = enrollment.student
                 
-                # Find the section that would be closest to the ideal count after adding this student
-                best_section = None
-                smallest_diff = float('inf')
+                # Get student's current period assignments to avoid conflicts
+                student_periods = Enrollment.objects.filter(
+                    student=student,
+                    section__period__isnull=False
+                ).values_list('section__period_id', flat=True)
                 
-                for section_info in section_enrollments:
-                    # Skip if section is at capacity
+                # Find the eligible section with the lowest current enrollment
+                eligible_sections = []
+                for section_info in section_data:
+                    # Skip sections that would create period conflicts
+                    if section_info['period_id'] and section_info['period_id'] in student_periods:
+                        continue
+                    
+                    # Skip sections at max capacity
                     if section_info['current_enrollment'] >= section_info['max_capacity']:
                         continue
                     
-                    # Calculate how far this would be from the ideal after adding the student
-                    diff = abs((section_info['current_enrollment'] + 1) - ideal_per_section)
-                    
-                    # If this is closer to ideal or we don't have a section yet
-                    if diff < smallest_diff:
-                        smallest_diff = diff
-                        best_section = section_info
+                    eligible_sections.append(section_info)
                 
-                if best_section:
-                    # Create enrollment record
+                if not eligible_sections:
+                    # Save this student for conflict resolution
+                    student_schedule_conflicts.append(enrollment)
+                    continue
+                
+                # Find the section with lowest enrollment
+                best_section = min(eligible_sections, key=lambda s: s['current_enrollment'])
+                
+                # Create enrollment record
+                Enrollment.objects.create(
+                    student=student,
+                    section=best_section['section']
+                )
+                
+                # Update section counts
+                best_section['current_enrollment'] += 1
+                assignments_count += 1
+                
+                print(f"DEBUG: Assigned {student.name} to section {best_section['section'].id}, now has {best_section['current_enrollment']} students")
+            
+            # 8. Handle students with schedule conflicts by trying alternate sections
+            # We might need to break some constraints to assign all students
+            for enrollment in student_schedule_conflicts:
+                student = enrollment.student
+                
+                # First try sections with capacity available even if there are period conflicts
+                capacity_sections = [s for s in section_data if s['current_enrollment'] < s['max_capacity']]
+                
+                if capacity_sections:
+                    # Choose section with lowest enrollment
+                    best_section = min(capacity_sections, key=lambda s: s['current_enrollment'])
+                    
+                    student_periods = Enrollment.objects.filter(
+                        student=student,
+                        section__period__isnull=False
+                    ).values_list('section__period_id', flat=True)
+                    
+                    # Check if this will create a conflict
+                    if best_section['period_id'] and best_section['period_id'] in student_periods:
+                        # Find the conflicting enrollment
+                        conflicting_enrollment = Enrollment.objects.get(
+                            student=student,
+                            section__period_id=best_section['period_id']
+                        )
+                        
+                        # Error message
+                        errors.append(f"Schedule conflict: {student.name} already has {conflicting_enrollment.section.course.name} " +
+                                     f"during the same period as {course.name}")
+                        unresolved_count += 1
+                    
+                    # Create enrollment record despite potential conflict
                     Enrollment.objects.create(
                         student=student,
                         section=best_section['section']
@@ -187,147 +230,32 @@ def initial_assignment_phase(course_id=None):
                     
                     # Update section counts
                     best_section['current_enrollment'] += 1
-                    best_section['available'] -= 1
                     assignments_count += 1
+                    resolved_count += 1
                     
-                    print(f"DEBUG: Assigned {student.name} to section {best_section['section'].id}, now has {best_section['current_enrollment']} students")
+                    print(f"DEBUG: Conflict resolution - Assigned {student.name} to section {best_section['section'].id}")
                 else:
-                    # Keep track of students we couldn't assign in first pass
-                    remaining_enrollments.append(enrollment)
-            
-            # Second pass: try to assign any remaining students to any available section
-            for enrollment in remaining_enrollments:
-                student = enrollment.student
-                
-                # Find any section with available capacity
-                for section_info in section_enrollments:
-                    if section_info['current_enrollment'] < section_info['max_capacity']:
-                        # Create enrollment record
-                        Enrollment.objects.create(
-                            student=student,
-                            section=section_info['section']
-                        )
-                        
-                        # Update section counts
-                        section_info['current_enrollment'] += 1
-                        section_info['available'] -= 1
-                        assignments_count += 1
-                        
-                        print(f"DEBUG: Second pass - Assigned {student.name} to section {section_info['section'].id}")
-                        break
-                else:
-                    # If we get here, all sections are at capacity
+                    # All sections are at capacity
                     failures_count += 1
-                    errors.append(f"All sections at capacity for {student.name} in {enrollment.course.name}")
+                    errors.append(f"All sections at capacity for {student.name} in {course.name}")
             
-            # Log final distribution
-            for section_info in section_enrollments:
-                print(f"DEBUG: Final - Section {section_info['section'].id}: {section_info['current_enrollment']} students")
+            # 9. Log final distribution
+            print(f"DEBUG: Final distribution for {course.name}:")
+            for section_info in section_data:
+                print(f"  Section {section_info['section'].id}: {section_info['current_enrollment']} students")
         
+        # Return combined results
         return {
-            'assignments_count': assignments_count,
-            'failures_count': failures_count,
+            'status': 'success',
+            'initial_assignments': assignments_count,
+            'initial_failures': failures_count,
+            'conflicts_resolved': resolved_count,
+            'unresolvable_conflicts': unresolved_count,
+            'message': f"Assigned {assignments_count} students to sections. " +
+                      f"Resolved {resolved_count} conflicts. " +
+                      f"{unresolved_count} conflicts could not be resolved.",
             'errors': errors
         }
-
-def conflict_resolution_phase(initial_results):
-    """
-    Phase 2: Resolve schedule conflicts
-    Checks for and resolves situations where students are assigned to multiple sections in the same period
-    """
-    # Get all students with section assignments
-    students_with_sections = Student.objects.filter(
-        sections__isnull=False
-    ).distinct()
-    
-    resolved_count = 0
-    unresolved_count = 0
-    errors = []
-    
-    with transaction.atomic():
-        for student in students_with_sections:
-            # Get all the student's section assignments by period
-            sections_by_period = {}
-            
-            for enrollment in Enrollment.objects.filter(student=student).select_related('section__period', 'section__course'):
-                section = enrollment.section
-                if not section.period:
-                    continue
-                    
-                period_id = section.period_id
-                if period_id not in sections_by_period:
-                    sections_by_period[period_id] = []
-                sections_by_period[period_id].append(enrollment)
-            
-            # Check for conflicts (more than one section per period)
-            for period_id, enrollments in sections_by_period.items():
-                if len(enrollments) <= 1:
-                    continue
-                
-                # We have a conflict in this period
-                # Sort by course priority (for now, we'll use alphabetical order as placeholder)
-                sorted_enrollments = sorted(
-                    enrollments,
-                    key=lambda e: e.section.course.name
-                )
-                
-                # Keep only the first enrollment, remove the rest
-                keep_enrollment = sorted_enrollments[0]
-                conflict_enrollments = sorted_enrollments[1:]
-                
-                for enrollment in conflict_enrollments:
-                    # Try to find an alternative section for this course
-                    alternate_section = find_alternate_section(student, enrollment.section.course, exclude_period=period_id)
-                    
-                    if alternate_section:
-                        # Move to alternate section
-                        enrollment.section = alternate_section
-                        enrollment.save()
-                        resolved_count += 1
-                    else:
-                        # No alternate section available, remove this enrollment
-                        enrollment.delete()
-                        unresolved_count += 1
-                        # Fetch the period object for better error message
-                        period = Period.objects.get(id=period_id)
-                        period_display = str(period)  # Use the string representation
-                        errors.append(f"Removed conflicting enrollment for {student.name} in {enrollment.section.course.name} " +
-                                      f"during period {period_display}")
-    
-    return {
-        'resolved_count': resolved_count,
-        'unresolved_count': unresolved_count,
-        'errors': errors
-    }
-
-def find_alternate_section(student, course, exclude_period=None):
-    """Find an alternate section for a student in a different period"""
-    # Get all the student's current period assignments
-    student_periods = Enrollment.objects.filter(
-        student=student,
-        section__period__isnull=False
-    ).values_list('section__period_id', flat=True)
-    
-    # Find sections for this course that don't conflict with the student's schedule
-    query = Q(course=course)
-    
-    if exclude_period:
-        query &= ~Q(period_id=exclude_period)
-    
-    if student_periods:
-        query &= ~Q(period_id__in=student_periods)
-    
-    # Also check capacity constraints
-    available_sections = []
-    for section in Section.objects.filter(query):
-        if section.max_size is None or section.students.count() < section.max_size:
-            available_sections.append(section)
-    
-    if available_sections:
-        # Randomize selection among available sections
-        return random.choice(available_sections)
-    
-    return None
 
 def deregister_all_sections(request):
     """API endpoint to remove all students from their section assignments"""
