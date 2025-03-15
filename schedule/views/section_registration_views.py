@@ -118,70 +118,64 @@ def initial_assignment_phase(course_id=None):
         # Process each course
         for course_id, enrollments in enrollments_by_course.items():
             # Get available sections for this course
-            sections = Section.objects.filter(course_id=course_id).select_related('period')
+            sections = list(Section.objects.filter(course_id=course_id).select_related('period'))
             
-            if not sections.exists():
+            if not sections:
                 failures_count += len(enrollments)
                 errors.append(f"No sections available for course {enrollments[0].course.name}")
                 continue
             
-            # Calculate current enrollment for each section
-            section_enrollments = {}
+            # Get section info including current enrollments
+            section_enrollments = []
             for section in sections:
                 enrolled_count = section.students.count()
-                max_capacity = section.max_size if section.max_size else float('inf')
-                available = max_capacity - enrolled_count
+                max_capacity = section.max_size if section.max_size else 999  # Use large value for "unlimited"
                 
-                # Skip sections with no capacity
-                if available <= 0:
-                    continue
-                
-                section_enrollments[section.id] = {
+                section_enrollments.append({
                     'section': section,
                     'current_enrollment': enrolled_count,
                     'max_capacity': max_capacity,
-                    'available': available,
+                    'available': max_capacity - enrolled_count,
                     'period_id': section.period_id if section.period else None
-                }
+                })
             
-            # Calculate target enrollment per section to achieve balance
-            total_students = len(enrollments) + sum(info['current_enrollment'] for info in section_enrollments.values())
-            available_sections_count = len(section_enrollments)
+            # Calculate ideal distribution
+            total_students = len(enrollments) + sum(info['current_enrollment'] for info in section_enrollments)
+            num_sections = len(section_enrollments)
             
-            if available_sections_count == 0:
+            if num_sections == 0:
                 failures_count += len(enrollments)
-                errors.append(f"No sections with available capacity for course {enrollments[0].course.name}")
+                errors.append(f"No sections available for course {enrollments[0].course.name}")
                 continue
             
-            target_per_section = total_students / available_sections_count
+            # Calculate target students per section
+            ideal_per_section = total_students / num_sections
+            print(f"DEBUG: Course {enrollments[0].course.name} - {len(enrollments)} students to assign, ideal: {ideal_per_section} per section")
             
-            # Randomize student order
+            # First pass: assign students to sections prioritizing balance
+            # Sort enrollments randomly to avoid patterns
             random.shuffle(enrollments)
             
-            # Assign students to sections
+            remaining_enrollments = []
+            
             for enrollment in enrollments:
                 student = enrollment.student
                 
-                # Get sections with available capacity
-                available_sections = [s for s in section_enrollments.values() if s['available'] > 0]
-                
-                if not available_sections:
-                    failures_count += 1
-                    errors.append(f"No available capacity in any section for {student.name} in {enrollment.course.name}")
-                    continue
-                
-                # Find the most balanced assignment by selecting section furthest from target
-                # Prioritize sections with fewer students than target, but consider all available
+                # Find the section that would be closest to the ideal count after adding this student
                 best_section = None
                 smallest_diff = float('inf')
                 
-                for section_info in available_sections:
-                    # Calculate how far this section is from target size after adding this student
-                    diff_from_target = abs((section_info['current_enrollment'] + 1) - target_per_section)
+                for section_info in section_enrollments:
+                    # Skip if section is at capacity
+                    if section_info['current_enrollment'] >= section_info['max_capacity']:
+                        continue
                     
-                    # If this section has fewer students and the difference is smaller, or if we don't have a best section yet
-                    if diff_from_target < smallest_diff or best_section is None:
-                        smallest_diff = diff_from_target
+                    # Calculate how far this would be from the ideal after adding the student
+                    diff = abs((section_info['current_enrollment'] + 1) - ideal_per_section)
+                    
+                    # If this is closer to ideal or we don't have a section yet
+                    if diff < smallest_diff:
+                        smallest_diff = diff
                         best_section = section_info
                 
                 if best_section:
@@ -195,9 +189,40 @@ def initial_assignment_phase(course_id=None):
                     best_section['current_enrollment'] += 1
                     best_section['available'] -= 1
                     assignments_count += 1
+                    
+                    print(f"DEBUG: Assigned {student.name} to section {best_section['section'].id}, now has {best_section['current_enrollment']} students")
                 else:
+                    # Keep track of students we couldn't assign in first pass
+                    remaining_enrollments.append(enrollment)
+            
+            # Second pass: try to assign any remaining students to any available section
+            for enrollment in remaining_enrollments:
+                student = enrollment.student
+                
+                # Find any section with available capacity
+                for section_info in section_enrollments:
+                    if section_info['current_enrollment'] < section_info['max_capacity']:
+                        # Create enrollment record
+                        Enrollment.objects.create(
+                            student=student,
+                            section=section_info['section']
+                        )
+                        
+                        # Update section counts
+                        section_info['current_enrollment'] += 1
+                        section_info['available'] -= 1
+                        assignments_count += 1
+                        
+                        print(f"DEBUG: Second pass - Assigned {student.name} to section {section_info['section'].id}")
+                        break
+                else:
+                    # If we get here, all sections are at capacity
                     failures_count += 1
-                    errors.append(f"Could not find a suitable section for {student.name} in {enrollment.course.name}")
+                    errors.append(f"All sections at capacity for {student.name} in {enrollment.course.name}")
+            
+            # Log final distribution
+            for section_info in section_enrollments:
+                print(f"DEBUG: Final - Section {section_info['section'].id}: {section_info['current_enrollment']} students")
         
         return {
             'assignments_count': assignments_count,
