@@ -234,6 +234,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
     const responseModalBody = document.getElementById('responseModalBody');
     
+    // Auto-check all eligible checkboxes on page load if a course is selected
+    if (window.location.search.includes('course_id=') && courseSelect.value) {
+        setTimeout(() => {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = true;
+                // Trigger the change event to check all student checkboxes
+                selectAllCheckbox.dispatchEvent(new Event('change'));
+            }
+        }, 100);
+    }
+    
+    // Store a flag when form is submitted to check all boxes after page load
+    filterForm.addEventListener('submit', function() {
+        if (courseSelect.value) {
+            sessionStorage.setItem('check_all_after_load', 'true');
+        }
+    });
+    
+    // Check if we need to check all boxes due to form submission
+    if (sessionStorage.getItem('check_all_after_load') === 'true') {
+        setTimeout(() => {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = true;
+                // Trigger the change event to check all student checkboxes
+                selectAllCheckbox.dispatchEvent(new Event('change'));
+            }
+        }, 100);
+        // Clear the flag
+        sessionStorage.removeItem('check_all_after_load');
+    }
+    
+    // Helper function to clear all checkboxes
+    function clearAllCheckboxes() {
+        const studentCheckboxes = document.querySelectorAll('.student-checkbox:not(:disabled)');
+        studentCheckboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+        }
+    }
+    
     // Individual enroll button handlers
     enrollBtns.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -306,6 +348,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.status === 'success') {
                 showResponse('success', data.message);
+                // Set a flag to clear checkboxes after reload
+                sessionStorage.setItem('clear_checkboxes', 'true');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -345,6 +389,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 showResponse('custom', message);
+                // Set a flag to clear checkboxes after reload
+                sessionStorage.setItem('clear_checkboxes', 'true');
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
@@ -355,6 +401,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             showResponse('error', 'An error occurred: ' + error);
         });
+    }
+    
+    // Check for the clear checkboxes flag on page load
+    if (sessionStorage.getItem('clear_checkboxes') === 'true') {
+        clearAllCheckboxes();
+        sessionStorage.removeItem('clear_checkboxes');
     }
     
     // API function for running the section assignment algorithm
