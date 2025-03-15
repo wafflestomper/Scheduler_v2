@@ -11,7 +11,7 @@ def enroll_students(request):
     """View for managing student enrollments in courses"""
     # Get filter parameters
     grade_filter = request.GET.get('grade')
-    course_id = request.GET.get('course_id')
+    course_ids = request.GET.getlist('course_id')
     
     # Get all available grades
     grades = list(Student.objects.values_list('grade_level', flat=True).distinct().order_by('grade_level'))
@@ -28,10 +28,10 @@ def enroll_students(request):
     if grade_filter:
         courses = courses.filter(grade_level=grade_filter)
         
-    # Get course if specified
-    selected_course = None
-    if course_id:
-        selected_course = Course.objects.filter(id=course_id).first()
+    # Get selected courses if specified
+    selected_courses = []
+    if course_ids:
+        selected_courses = Course.objects.filter(id__in=course_ids)
     
     # Prepare student data with enrollment info
     student_data = []
@@ -42,12 +42,13 @@ def enroll_students(request):
         # Count section registrations (actual section assignments)
         registered_section_count = Enrollment.objects.filter(student=student).count()
         
-        # Check if student is enrolled in the selected course
+        # Check if student is enrolled in the selected courses
         enrolled_in_selected_course = False
-        if selected_course:
+        if selected_courses:
+            # Check if enrolled in ANY of the selected courses
             enrolled_in_selected_course = CourseEnrollment.objects.filter(
                 student=student,
-                course=selected_course
+                course__in=selected_courses
             ).exists()
         
         student_data.append({
@@ -59,14 +60,14 @@ def enroll_students(request):
     
     # Calculate enrollment statistics
     total_students = len(student_data)
-    enrolled_students = sum(1 for data in student_data if data['enrolled_in_selected_course']) if selected_course else sum(1 for data in student_data if data['enrolled_course_count'] > 0)
+    enrolled_students = sum(1 for data in student_data if data['enrolled_in_selected_course']) if selected_courses else sum(1 for data in student_data if data['enrolled_course_count'] > 0)
     available_students = total_students - enrolled_students
     
     context = {
         'grades': grades,
         'grade_filter': grade_filter,
         'courses': courses,
-        'course_id': course_id,
+        'selected_course_ids': course_ids,
         'student_data': student_data,
         'total_students': total_students,
         'enrolled_students': enrolled_students,
