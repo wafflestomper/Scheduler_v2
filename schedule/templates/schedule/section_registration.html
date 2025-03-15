@@ -205,6 +205,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const courseRegisterBtns = document.querySelectorAll('.course-register-btn');
     const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
     const resultModalBody = document.getElementById('resultModalBody');
+    const closeModalBtn = document.querySelector('.modal-footer .btn-secondary');
+    
+    // Add event listener for the close button
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            // Refresh the page when the modal is closed
+            window.location.reload();
+        });
+    }
+    
+    // Also refresh when modal is hidden by any means (clicking X, backdrop, escape key)
+    document.getElementById('resultModal').addEventListener('hidden.bs.modal', function() {
+        window.location.reload();
+    });
     
     // Assign all students to sections
     if (runRegistrationBtn) {
