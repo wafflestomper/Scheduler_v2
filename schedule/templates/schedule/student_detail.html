@@ -97,7 +97,7 @@
                                 <tbody>
                                     {% for key, data in period_dict.items %}
                                         <tr {% if not data.section %}class="table-light"{% endif %}>
-                                            <td>{{ data.period.get_day_display }} - Period {{ data.period.slot }}</td>
+                                            <td>{{ data.period.get_days_display }} - Period {{ data.period.slot }}</td>
                                             <td>
                                                 {% if data.section %}
                                                     {{ data.section.course.name }}

@@ -334,7 +334,7 @@ def schedule_generation(request):
 
 def master_schedule(request):
     sections = Section.objects.all().select_related('course', 'teacher', 'room', 'period')
-    periods = Period.objects.all().order_by('day', 'slot')
+    periods = Period.objects.all().order_by('days', 'slot')
     
     # Group sections by day and period for easier display
     schedule_by_period = {}
@@ -428,12 +428,12 @@ def export_student_schedules(request):
     writer = csv.writer(response)
     
     # Get all periods for headers
-    periods = Period.objects.all().order_by('day', 'slot')
+    periods = Period.objects.all().order_by('days', 'slot')
     
     # Write header row
     header = ['Student ID', 'Student Name', 'Grade']
     for period in periods:
-        header.append(f"{period.get_day_display()} Period {period.slot}")
+        header.append(f"{period.get_days_display()} Period {period.slot}")
     writer.writerow(header)
     
     # Get all students
@@ -590,20 +590,25 @@ def student_detail(request, student_id):
         if student_id in section.get_students_list():
             schedule.append(section)
     
-    # Sort schedule by period
-    schedule.sort(key=lambda s: (s.period.day, s.period.slot) if s.period else (99, 99))
+    # Sort schedule by period - using days instead of day
+    # Get the first day in the days list for sorting purposes
+    schedule.sort(key=lambda s: (s.period.get_days_list()[0] if s.period and s.period.get_days_list() else 'Z', s.period.slot) if s.period else ('Z', 'Z'))
     
     # Get all periods for organization
-    periods = Period.objects.all().order_by('day', 'slot')
+    periods = Period.objects.all().order_by('days', 'slot')
     period_dict = {}
     for period in periods:
-        key = f"{period.get_day_display()}-{period.slot}"
+        # Use the first day code in the days list for display
+        day_display = period.get_days_display().split(',')[0].strip() if period.get_days_display() else 'No day'
+        key = f"{day_display}-{period.slot}"
         period_dict[key] = {'period': period, 'section': None}
     
     # Organize schedule by period
     for section in schedule:
         if section.period:
-            key = f"{section.period.get_day_display()}-{section.period.slot}"
+            # Use the first day code in the days list for display
+            day_display = section.period.get_days_display().split(',')[0].strip() if section.period.get_days_display() else 'No day'
+            key = f"{day_display}-{section.period.slot}"
             if key in period_dict:
                 period_dict[key]['section'] = section
     
