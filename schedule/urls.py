@@ -13,4 +13,8 @@ urlpatterns = [
     path('export/master/', views.export_master_schedule, name='export_master_schedule'),
     path('download-template/<str:template_type>/', views.download_template_csv, name='download_template'),
     path('view-students/', views.view_students, name='view_students'),
+    path('student/<str:student_id>/', views.student_detail, name='student_detail'),
+    path('student/<str:student_id>/edit/', views.edit_student, name='edit_student'),
+    path('student/<str:student_id>/delete/', views.delete_student, name='delete_student'),
+    path('reports/', views.admin_reports, name='admin_reports'),
 ] 

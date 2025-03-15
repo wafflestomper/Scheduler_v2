@@ -95,6 +95,15 @@ We've built a Django-based school scheduling application with the following feat
 - Enhanced the student name formatting to include nicknames in quotes when available
 - Verified that all CSV upload functionality works correctly with the new formats
 
+## 2025-03-15 15:55 - Fixed View Students Feature
+
+Fixed issues with the view students feature:
+1. Added the missing `{% load schedule_extras %}` tag to the view_students.html template to load the custom template filter
+2. Added 'rest_framework' to INSTALLED_APPS in settings.py
+3. Installed Django REST Framework with pip
+
+The view students feature is now working correctly, allowing filtering by grade level and search by name.
+
 ## Next Steps
 
 ### Testing

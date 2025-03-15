@@ -59,7 +59,11 @@
                                     {% for student in students_by_grade|get_item:grade %}
                                     <tr>
                                         <td>{{ student.id }}</td>
-                                        <td>{{ student.name }}</td>
+                                        <td>
+                                            <a href="{% url 'student_detail' student_id=student.id %}">
+                                                {{ student.name }}
+                                            </a>
+                                        </td>
                                         <td>{{ student.grade_level }}</td>
                                         <td class="text-end">
                                             {% if student.id in scheduled_students %}

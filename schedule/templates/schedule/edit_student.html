@@ -1,0 +1,84 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Edit Student - {{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'view_students' %}">Students</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'student_detail' student_id=student.id %}">{{ student.name }}</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Edit Student Information</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.id.id_for_label }}" class="form-label">Student ID</label>
+                            {{ form.id }}
+                            {% if form.id.help_text %}
+                                <div class="form-text">{{ form.id.help_text }}</div>
+                            {% endif %}
+                            {% if form.id.errors %}
+                                <div class="invalid-feedback d-block">{{ form.id.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Full Name</label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                                <div class="form-text">{{ form.name.help_text }}</div>
+                            {% endif %}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.grade_level.id_for_label }}" class="form-label">Grade Level</label>
+                            {{ form.grade_level }}
+                            {% if form.grade_level.help_text %}
+                                <div class="form-text">{{ form.grade_level.help_text }}</div>
+                            {% endif %}
+                            {% if form.grade_level.errors %}
+                                <div class="invalid-feedback d-block">{{ form.grade_level.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.preferences.id_for_label }}" class="form-label">Course Preferences</label>
+                            {{ form.preferences }}
+                            {% if form.preferences.help_text %}
+                                <div class="form-text">{{ form.preferences.help_text }}</div>
+                            {% endif %}
+                            {% if form.preferences.errors %}
+                                <div class="invalid-feedback d-block">{{ form.preferences.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'student_detail' student_id=student.id %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

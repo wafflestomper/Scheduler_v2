@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 import csv
 from io import StringIO
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.views import View
 from .models import Teacher, Room, Student, Course, Period, Section
-from .forms import CSVUploadForm
+from .forms import CSVUploadForm, StudentForm
 from django.db import transaction
 from django.core.exceptions import ValidationError
 import constraint
@@ -418,6 +418,168 @@ def view_students(request):
     }
     
     return render(request, 'schedule/view_students.html', context)
+
+def student_detail(request, student_id):
+    """View detailed information for a specific student."""
+    try:
+        student = Student.objects.get(id=student_id)
+    except Student.DoesNotExist:
+        messages.error(request, "Student not found.")
+        return redirect('view_students')
+    
+    # Get student's schedule
+    sections = Section.objects.all().select_related('course', 'teacher', 'room', 'period')
+    schedule = []
+    
+    for section in sections:
+        if student_id in section.get_students_list():
+            schedule.append(section)
+    
+    # Sort schedule by period
+    schedule.sort(key=lambda s: (s.period.day, s.period.slot) if s.period else (99, 99))
+    
+    # Get all periods for organization
+    periods = Period.objects.all().order_by('day', 'slot')
+    period_dict = {}
+    for period in periods:
+        key = f"{period.get_day_display()}-{period.slot}"
+        period_dict[key] = {'period': period, 'section': None}
+    
+    # Organize schedule by period
+    for section in schedule:
+        if section.period:
+            key = f"{section.period.get_day_display()}-{section.period.slot}"
+            if key in period_dict:
+                period_dict[key]['section'] = section
+    
+    context = {
+        'student': student,
+        'schedule': schedule,
+        'period_dict': period_dict,
+        'has_schedule': bool(schedule)
+    }
+    
+    return render(request, 'schedule/student_detail.html', context)
+
+def edit_student(request, student_id):
+    """Edit student information."""
+    student = get_object_or_404(Student, id=student_id)
+    
+    if request.method == 'POST':
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Student {student.name} updated successfully.")
+            return redirect('student_detail', student_id=student.id)
+    else:
+        form = StudentForm(instance=student)
+    
+    context = {
+        'form': form,
+        'student': student
+    }
+    
+    return render(request, 'schedule/edit_student.html', context)
+
+def delete_student(request, student_id):
+    """Delete a student record."""
+    student = get_object_or_404(Student, id=student_id)
+    
+    if request.method == 'POST':
+        # Save name for confirmation message
+        student_name = student.name
+        
+        # Remove student from all sections
+        sections = Section.objects.all()
+        for section in sections:
+            students_list = section.get_students_list()
+            if student_id in students_list:
+                students_list.remove(student_id)
+                section.students = ','.join(students_list)
+                section.save()
+        
+        # Delete the student
+        student.delete()
+        
+        messages.success(request, f"Student {student_name} deleted successfully.")
+        return redirect('view_students')
+    
+    # GET request - show confirmation page
+    return render(request, 'schedule/delete_student_confirm.html', {'student': student})
+
+def admin_reports(request):
+    """View for administrative reports."""
+    
+    # Get enrollment by grade level
+    students = Student.objects.all()
+    enrollment_by_grade = {}
+    total_students = 0
+    
+    for student in students:
+        grade = student.grade_level
+        if grade not in enrollment_by_grade:
+            enrollment_by_grade[grade] = 0
+        enrollment_by_grade[grade] += 1
+        total_students += 1
+    
+    # Get enrollment by course
+    course_enrollment = {}
+    courses = Course.objects.all().order_by('grade_level', 'name')
+    sections = Section.objects.all()
+    
+    for course in courses:
+        course_enrollment[course.id] = {
+            'course': course,
+            'total_sections': 0,
+            'total_students': 0,
+            'avg_class_size': 0
+        }
+    
+    for section in sections:
+        course_id = section.course.id
+        student_count = len(section.get_students_list())
+        
+        if course_id in course_enrollment:
+            course_enrollment[course_id]['total_sections'] += 1
+            course_enrollment[course_id]['total_students'] += student_count
+    
+    # Calculate averages
+    for course_id, data in course_enrollment.items():
+        if data['total_sections'] > 0:
+            data['avg_class_size'] = round(data['total_students'] / data['total_sections'], 1)
+    
+    # Get teacher load
+    teacher_load = {}
+    teachers = Teacher.objects.all().order_by('name')
+    
+    for teacher in teachers:
+        teacher_load[teacher.id] = {
+            'teacher': teacher,
+            'total_sections': 0,
+            'total_students': 0,
+            'courses': []
+        }
+    
+    for section in sections:
+        teacher_id = section.teacher.id
+        student_count = len(section.get_students_list())
+        
+        if teacher_id in teacher_load:
+            teacher_load[teacher_id]['total_sections'] += 1
+            teacher_load[teacher_id]['total_students'] += student_count
+            
+            course_name = section.course.name
+            if course_name not in teacher_load[teacher_id]['courses']:
+                teacher_load[teacher_id]['courses'].append(course_name)
+    
+    context = {
+        'enrollment_by_grade': enrollment_by_grade,
+        'total_students': total_students,
+        'course_enrollment': course_enrollment,
+        'teacher_load': teacher_load,
+    }
+    
+    return render(request, 'schedule/admin_reports.html', context)
 
 # Helper functions for schedule generation
 def generate_schedules():
