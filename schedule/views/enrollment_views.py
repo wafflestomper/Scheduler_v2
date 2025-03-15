@@ -207,6 +207,72 @@ def batch_enroll_students(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 
+def batch_disenroll_students(request):
+    """API endpoint for disenrolling multiple students from a course at once"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'})
+    
+    try:
+        data = json.loads(request.body)
+        student_ids = data.get('student_ids', [])
+        course_id = data.get('course_id')
+        
+        if not course_id:
+            return JsonResponse({'status': 'error', 'message': 'Missing required course_id parameter'})
+        
+        course = Course.objects.get(id=course_id)
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for student_id in student_ids:
+            try:
+                student = Student.objects.get(id=student_id)
+                
+                # Try to find and delete the enrollment
+                try:
+                    enrollment = CourseEnrollment.objects.get(
+                        student=student,
+                        course=course
+                    )
+                    enrollment.delete()
+                    
+                    # Also remove any section assignments for this course
+                    enrollments = Enrollment.objects.filter(
+                        student=student,
+                        section__course=course
+                    )
+                    enrollments.delete()
+                    
+                    success_count += 1
+                except CourseEnrollment.DoesNotExist:
+                    error_count += 1
+                    errors.append(f'{student.name} is not enrolled in {course.name}')
+                    
+            except Student.DoesNotExist:
+                error_count += 1
+                errors.append(f'Student ID {student_id} not found')
+            except Exception as e:
+                error_count += 1
+                errors.append(f'Error disenrolling student ID {student_id}: {str(e)}')
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully disenrolled {success_count} students from {course.name}',
+            'success_count': success_count,
+            'error_count': error_count,
+            'errors': errors
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'})
+    except Course.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Course not found'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
 def assign_students_to_sections(request):
     """API endpoint for assigning students to sections based on course enrollments"""
     if request.method != 'POST':
