@@ -8,6 +8,12 @@
     <p class="lead">A tool for middle school scheduling that helps manage students, teachers, rooms, and courses.</p>
     <hr class="my-4">
     <p>Get started by uploading your CSV data files or reviewing existing schedules.</p>
+    <div class="mb-4">
+        <a href="{% url 'csv_upload' %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-upload"></i> Go to CSV Uploader
+        </a>
+        <span class="ms-2">Upload data and access downloadable templates</span>
+    </div>
     <div class="row mt-4">
         <div class="col-md-4">
             <div class="card">
@@ -89,4 +95,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 {% endblock %} 

@@ -11,4 +11,5 @@ urlpatterns = [
     path('conflicts/', views.get_conflicts, name='get_conflicts'),
     path('export/students/', views.export_student_schedules, name='export_student_schedules'),
     path('export/master/', views.export_master_schedule, name='export_master_schedule'),
+    path('download-template/<str:template_type>/', views.download_template_csv, name='download_template'),
 ] 

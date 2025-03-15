@@ -57,6 +57,8 @@ class CSVUploadView(View):
                         self.process_courses(reader)
                     elif data_type == 'periods':
                         self.process_periods(reader)
+                    elif data_type == 'sections':
+                        self.process_sections(reader)
                 
                 messages.success(request, f'Successfully processed {data_type} data')
                 return redirect('csv_upload')
@@ -72,9 +74,9 @@ class CSVUploadView(View):
             Student.objects.update_or_create(
                 id=row['student_id'],
                 defaults={
-                    'name': row['name'],
-                    'grade_level': int(row['grade']),
-                    'preferences': row.get('elective_prefs', ''),
+                    'name': f"{row['first_name']} {row.get('last_name', '')}",
+                    'grade_level': int(row['grade_level']),
+                    'preferences': '',  # No longer using elective_prefs
                 }
             )
     
@@ -83,7 +85,7 @@ class CSVUploadView(View):
             Teacher.objects.update_or_create(
                 id=row['teacher_id'],
                 defaults={
-                    'name': row['name'],
+                    'name': f"{row['first_name']} {row.get('last_name', '')}",
                     'availability': row.get('availability', ''),
                     'subjects': row.get('subjects', ''),
                 }
@@ -106,9 +108,9 @@ class CSVUploadView(View):
                 id=row['course_id'],
                 defaults={
                     'name': row['name'],
-                    'type': row['type'],
-                    'grade_level': int(row['grade']),
-                    'max_students': int(row['max_students']),
+                    'type': 'core',  # Default to core type since it's no longer in CSV
+                    'grade_level': int(row['grade_level']),
+                    'max_students': 30,  # Default value since it's no longer in CSV
                     'eligible_teachers': row.get('teachers', ''),
                 }
             )
@@ -118,12 +120,40 @@ class CSVUploadView(View):
             Period.objects.update_or_create(
                 id=row['period_id'],
                 defaults={
-                    'day': row['day'],
-                    'slot': int(row['slot']),
+                    'day': 'M',  # Default to Monday since day is no longer in CSV
+                    'slot': 1,   # Default to slot 1 since slot is no longer in CSV
                     'start_time': row['start_time'],
                     'end_time': row['end_time'],
                 }
             )
+            
+    def process_sections(self, reader):
+        for row in reader:
+            # Get the related objects
+            try:
+                course = Course.objects.get(id=row['course_id'])
+                teacher = Teacher.objects.get(id=row['teacher'])
+                period = Period.objects.get(id=row['period'])
+                room = Room.objects.get(id=row['room'])
+                
+                # Create or update the section
+                # Note: we're generating a unique ID based on course and section number
+                section_id = f"{row['course_id']}_S{row['section_number']}"
+                
+                Section.objects.update_or_create(
+                    id=section_id,
+                    defaults={
+                        'course': course,
+                        'teacher': teacher,
+                        'room': room,
+                        'period': period,
+                        'students': '',  # Empty initially, students will be assigned later
+                    }
+                )
+            except (Course.DoesNotExist, Teacher.DoesNotExist, Period.DoesNotExist, Room.DoesNotExist) as e:
+                # Raise a more descriptive error
+                entity_type = str(e).split('.')[0]
+                raise ValidationError(f"Invalid {entity_type} reference in section data: {str(e)}")
 
 def schedule_generation(request):
     if request.method == 'POST':
@@ -289,6 +319,49 @@ def export_master_schedule(request):
             section.room.number,
             len(section.get_students_list())
         ])
+    
+    return response
+
+def download_template_csv(request, template_type):
+    """Serve empty CSV templates with headers for each data type."""
+    if template_type not in ['students', 'teachers', 'rooms', 'courses', 'periods', 'sections']:
+        return HttpResponse("Invalid template type", status=400)
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{template_type}_template.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write appropriate headers based on template type
+    if template_type == 'students':
+        writer.writerow(['student_id', 'first_name', 'nickname', 'last_name', 'grade_level'])
+        # Add a sample row
+        writer.writerow(['S001', 'John', 'Johnny', 'Doe', '6'])
+        writer.writerow(['S002', 'Jane', '', 'Smith', '7'])
+    elif template_type == 'teachers':
+        writer.writerow(['teacher_id', 'first_name', 'last_name', 'availability', 'grade_level', 'subjects', 'gender'])
+        # Add a sample row
+        writer.writerow(['T001', 'Sarah', 'Smith', 'M1-M6,T1-T3', '6,7,8', 'Math|Science', 'F'])
+        writer.writerow(['T002', 'Robert', 'Johnson', 'M1-M6,T1-T6,W1-W6', '7,8', 'English|History', 'M'])
+    elif template_type == 'rooms':
+        writer.writerow(['room_id', 'number', 'capacity', 'type'])
+        # Add a sample row
+        writer.writerow(['R001', '101', '30', 'classroom'])
+    elif template_type == 'courses':
+        writer.writerow(['course_id', 'name', 'teachers', 'grade_level', 'duration', 'sections_needed'])
+        # Add a sample row
+        writer.writerow(['C001', 'Math 6', 'T001|T002', '6', '1', '2'])
+        writer.writerow(['C002', 'Art', 'T003', '0', '1', '1'])
+    elif template_type == 'periods':
+        writer.writerow(['period_id', 'start_time', 'end_time'])
+        # Add a sample row
+        writer.writerow(['P001', '08:00', '08:45'])
+        writer.writerow(['P002', '08:50', '09:35'])
+    elif template_type == 'sections':
+        writer.writerow(['course_id', 'section_number', 'teacher', 'period', 'room', 'max_size'])
+        # Add a sample row
+        writer.writerow(['C001', '1', 'T001', 'P001', 'R001', '30'])
+        writer.writerow(['C001', '2', 'T002', 'P003', 'R002', '25'])
     
     return response
 

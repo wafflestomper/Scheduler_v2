@@ -7,6 +7,7 @@ class CSVUploadForm(forms.Form):
         ('rooms', 'Rooms'),
         ('courses', 'Courses'),
         ('periods', 'Periods'),
+        ('sections', 'Sections'),
     ]
     
     data_type = forms.ChoiceField(choices=DATA_TYPES)
