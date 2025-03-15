@@ -28,10 +28,6 @@
                             <i class="bi bi-x-circle"></i> Deregister All Section Assignments
                         </button>
                         
-                        <a href="{% url 'assign_language_courses' %}" class="btn btn-success mb-3">
-                            <i class="bi bi-translate"></i> Assign Language Courses
-                        </a>
-                        
                         <form id="course-registration-form">
                             <div class="mb-3">
                                 <label for="course-select" class="form-label">Or select a specific course:</label>
@@ -143,7 +139,11 @@
                                 {% for stat in section_stats %}
                                 <tr>
                                     <td>{{ stat.section.section_number }}</td>
-                                    <td>{{ stat.section.course.name }}</td>
+                                    <td>
+                                        <a href="{% url 'section_roster' course_id=stat.section.course.id %}?section={{ stat.section.section_number }}" class="text-decoration-none">
+                                            {{ stat.section.course.name }}
+                                        </a>
+                                    </td>
                                     <td>{{ stat.section.period.name|default:"Unassigned" }}</td>
                                     <td>{{ stat.section.teacher.name|default:"Unassigned" }}</td>
                                     <td>{{ stat.section.room.name|default:"Unassigned" }}</td>
