@@ -7,42 +7,43 @@ from django.db import transaction
 
 def view_teachers(request):
     """View all teachers."""
-    teachers = Teacher.objects.all().order_by('last_name', 'first_name')
-    return render(request, 'schedule/teachers/view_teachers.html', {'teachers': teachers})
+    teachers = Teacher.objects.all().order_by('name')
+    return render(request, 'schedule/view_teachers.html', {'teachers': teachers})
 
 
 def create_teacher(request):
     """Create a new teacher."""
     if request.method == 'POST':
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        email = request.POST.get('email')
+        name = request.POST.get('name')
+        availability = request.POST.get('availability')
+        subjects = request.POST.get('subjects')
         
         try:
             # Validate input
-            if not first_name:
-                raise ValueError("First name is required")
-            
-            if not last_name:
-                raise ValueError("Last name is required")
+            if not name:
+                raise ValueError("Name is required")
             
             # Create the teacher
             with transaction.atomic():
+                # Generate a teacher ID based on the name
+                teacher_id = f"T{Teacher.objects.count() + 1:03d}"
+                
                 teacher = Teacher(
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email if email else None
+                    id=teacher_id,
+                    name=name,
+                    availability=availability if availability else "",
+                    subjects=subjects if subjects else ""
                 )
                 teacher.save()
                 
-                messages.success(request, f"Teacher '{first_name} {last_name}' created successfully!")
+                messages.success(request, f"Teacher '{name}' created successfully!")
                 return redirect('view_teachers')
                 
         except ValueError as e:
             messages.error(request, str(e))
             
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/teachers/create_teacher.html')
+    return render(request, 'schedule/create_teacher.html')
 
 
 def edit_teacher(request, teacher_id):
@@ -50,33 +51,30 @@ def edit_teacher(request, teacher_id):
     teacher = get_object_or_404(Teacher, pk=teacher_id)
     
     if request.method == 'POST':
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        email = request.POST.get('email')
+        name = request.POST.get('name')
+        availability = request.POST.get('availability')
+        subjects = request.POST.get('subjects')
         
         try:
             # Validate input
-            if not first_name:
-                raise ValueError("First name is required")
-            
-            if not last_name:
-                raise ValueError("Last name is required")
+            if not name:
+                raise ValueError("Name is required")
             
             # Update the teacher
             with transaction.atomic():
-                teacher.first_name = first_name
-                teacher.last_name = last_name
-                teacher.email = email if email else None
+                teacher.name = name
+                teacher.availability = availability if availability else ""
+                teacher.subjects = subjects if subjects else ""
                 teacher.save()
                 
-                messages.success(request, f"Teacher '{first_name} {last_name}' updated successfully!")
+                messages.success(request, f"Teacher '{name}' updated successfully!")
                 return redirect('view_teachers')
                 
         except ValueError as e:
             messages.error(request, str(e))
     
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/teachers/edit_teacher.html', {'teacher': teacher})
+    return render(request, 'schedule/edit_teacher.html', {'teacher': teacher})
 
 
 def delete_teacher(request, teacher_id):
@@ -85,13 +83,13 @@ def delete_teacher(request, teacher_id):
     
     if request.method == 'POST':
         # Check if there are any sections assigned to this teacher
-        if teacher.section_set.exists():
-            messages.error(request, f"Cannot delete teacher '{teacher.full_name}' because they have sections assigned to them.")
+        if teacher.sections.exists():
+            messages.error(request, f"Cannot delete teacher '{teacher.name}' because they have sections assigned to them.")
             return redirect('view_teachers')
         
-        teacher_name = teacher.full_name
+        teacher_name = teacher.name
         teacher.delete()
         messages.success(request, f"Teacher '{teacher_name}' deleted successfully!")
         return redirect('view_teachers')
     
-    return render(request, 'schedule/teachers/confirm_delete.html', {'teacher': teacher}) 
+    return render(request, 'schedule/delete_teacher_confirm.html', {'teacher': teacher}) 

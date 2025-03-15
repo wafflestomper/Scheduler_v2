@@ -8,16 +8,16 @@ from django.db import transaction
 def view_courses(request):
     """View all courses."""
     courses = Course.objects.all().order_by('name')
-    return render(request, 'schedule/courses/view_courses.html', {'courses': courses})
+    return render(request, 'schedule/view_courses.html', {'courses': courses})
 
 
 def create_course(request):
     """Create a new course."""
     if request.method == 'POST':
         name = request.POST.get('name')
-        course_type = request.POST.get('course_type')
+        course_type = request.POST.get('type')
         grade_level = request.POST.get('grade_level')
-        capacity = request.POST.get('capacity', 30)  # Default capacity of 30
+        max_students = request.POST.get('max_students', 30)  # Default capacity of 30
         sections_needed = request.POST.get('sections_needed', 1)  # Default 1 section
         
         try:
@@ -29,11 +29,16 @@ def create_course(request):
                 raise ValueError("Course type is required")
             
             try:
-                capacity = int(capacity)
-                if capacity <= 0:
-                    raise ValueError("Capacity must be a positive number")
+                grade_level = int(grade_level)
+            except (ValueError, TypeError):
+                raise ValueError("Grade level must be a valid number")
+            
+            try:
+                max_students = int(max_students)
+                if max_students <= 0:
+                    raise ValueError("Max students must be a positive number")
             except ValueError:
-                raise ValueError("Capacity must be a valid number")
+                raise ValueError("Max students must be a valid number")
             
             try:
                 sections_needed = int(sections_needed)
@@ -44,11 +49,15 @@ def create_course(request):
             
             # Create the course
             with transaction.atomic():
+                # Generate a course ID
+                course_id = f"C{Course.objects.count() + 1:03d}"
+                
                 course = Course(
+                    id=course_id,
                     name=name,
-                    course_type=course_type,
+                    type=course_type,
                     grade_level=grade_level,
-                    capacity=capacity,
+                    max_students=max_students,
                     sections_needed=sections_needed
                 )
                 course.save()
@@ -60,7 +69,7 @@ def create_course(request):
             messages.error(request, str(e))
             
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/courses/create_course.html', {
+    return render(request, 'schedule/create_course.html', {
         'course_types': Course.COURSE_TYPES
     })
 
@@ -71,9 +80,9 @@ def edit_course(request, course_id):
     
     if request.method == 'POST':
         name = request.POST.get('name')
-        course_type = request.POST.get('course_type')
+        course_type = request.POST.get('type')
         grade_level = request.POST.get('grade_level')
-        capacity = request.POST.get('capacity')
+        max_students = request.POST.get('max_students')
         sections_needed = request.POST.get('sections_needed')
         
         try:
@@ -85,11 +94,16 @@ def edit_course(request, course_id):
                 raise ValueError("Course type is required")
             
             try:
-                capacity = int(capacity)
-                if capacity <= 0:
-                    raise ValueError("Capacity must be a positive number")
+                grade_level = int(grade_level)
+            except (ValueError, TypeError):
+                raise ValueError("Grade level must be a valid number")
+            
+            try:
+                max_students = int(max_students)
+                if max_students <= 0:
+                    raise ValueError("Max students must be a positive number")
             except ValueError:
-                raise ValueError("Capacity must be a valid number")
+                raise ValueError("Max students must be a valid number")
             
             try:
                 sections_needed = int(sections_needed)
@@ -101,9 +115,9 @@ def edit_course(request, course_id):
             # Update the course
             with transaction.atomic():
                 course.name = name
-                course.course_type = course_type
+                course.type = course_type
                 course.grade_level = grade_level
-                course.capacity = capacity
+                course.max_students = max_students
                 course.sections_needed = sections_needed
                 course.save()
                 
@@ -114,7 +128,7 @@ def edit_course(request, course_id):
             messages.error(request, str(e))
     
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/courses/edit_course.html', {
+    return render(request, 'schedule/edit_course.html', {
         'course': course,
         'course_types': Course.COURSE_TYPES
     })
@@ -126,7 +140,7 @@ def delete_course(request, course_id):
     
     if request.method == 'POST':
         # Check if there are any sections using this course
-        if course.section_set.exists():
+        if course.sections.exists():
             messages.error(request, f"Cannot delete course '{course.name}' because it has sections assigned to it.")
             return redirect('view_courses')
         
@@ -135,4 +149,4 @@ def delete_course(request, course_id):
         messages.success(request, f"Course '{course_name}' deleted successfully!")
         return redirect('view_courses')
     
-    return render(request, 'schedule/courses/confirm_delete.html', {'course': course}) 
+    return render(request, 'schedule/delete_course_confirm.html', {'course': course}) 

@@ -55,7 +55,7 @@ def admin_reports(request):
     # Students by grade level
     students_by_grade = {}
     for student in students:
-        grade = student.grade if student.grade is not None else 'Unknown'
+        grade = student.grade_level if student.grade_level is not None else 'Unknown'
         if grade not in students_by_grade:
             students_by_grade[grade] = 0
         students_by_grade[grade] += 1
@@ -63,7 +63,7 @@ def admin_reports(request):
     # Courses by type
     courses_by_type = {}
     for course in courses:
-        course_type = course.course_type if course.course_type else 'Unknown'
+        course_type = course.type if course.type else 'Unknown'
         if course_type not in courses_by_type:
             courses_by_type[course_type] = 0
         courses_by_type[course_type] += 1
@@ -72,7 +72,7 @@ def admin_reports(request):
     sections_by_course_type = {}
     for section in sections:
         if section.course:
-            course_type = section.course.course_type if section.course.course_type else 'Unknown'
+            course_type = section.course.type if section.course.type else 'Unknown'
             if course_type not in sections_by_course_type:
                 sections_by_course_type[course_type] = 0
             sections_by_course_type[course_type] += 1
@@ -81,19 +81,19 @@ def admin_reports(request):
     teacher_load = {}
     for teacher in teachers:
         teacher_sections = sections.filter(teacher=teacher)
-        teacher_load[teacher.full_name] = teacher_sections.count()
+        teacher_load[teacher.name] = teacher_sections.count()
     
     # Room utilization (number of sections per room)
     room_utilization = {}
     for room in rooms:
         room_sections = sections.filter(room=room)
-        room_utilization[room.name] = room_sections.count()
+        room_utilization[room.number] = room_sections.count()
     
     # Period utilization (number of sections per period)
     period_utilization = {}
     for period in periods:
         period_sections = sections.filter(period=period)
-        period_utilization[period.name] = period_sections.count()
+        period_utilization[str(period)] = period_sections.count()
     
     # Find any schedule conflicts
     conflicts = find_schedule_conflicts()
@@ -105,7 +105,7 @@ def admin_reports(request):
         'total_rooms': total_rooms,
         'total_courses': total_courses,
         'total_sections': total_sections,
-        'students_by_grade': students_by_grade,
+        'enrollment_by_grade': students_by_grade,
         'courses_by_type': courses_by_type,
         'sections_by_course_type': sections_by_course_type,
         'teacher_load': teacher_load,
@@ -143,7 +143,7 @@ def generate_schedules():
 def create_core_sections(courses, teachers, rooms, periods):
     """Create sections for core courses."""
     # Get core courses (Math, Science, English, Social Studies)
-    core_courses = courses.filter(course_type__in=['Math', 'Science', 'English', 'Social Studies'])
+    core_courses = courses.filter(type__in=['core'])
     
     # For each core course, create the required number of sections
     for course in core_courses:
@@ -179,8 +179,11 @@ def create_core_sections(courses, teachers, rooms, periods):
                             continue
                         
                         # Create the section
+                        section_id = f"{course.id}-{i+1}"
                         section = Section(
+                            id=section_id,
                             course=course,
+                            section_number=i+1,
                             teacher=teacher,
                             room=room,
                             period=period
@@ -191,20 +194,25 @@ def create_core_sections(courses, teachers, rooms, periods):
             
             # If we couldn't find a valid assignment, create an unassigned section
             if not assigned:
-                section = Section(course=course)
+                section_id = f"{course.id}-{i+1}"
+                section = Section(
+                    id=section_id,
+                    course=course,
+                    section_number=i+1
+                )
                 section.save()
 
 
 def assign_students_to_core_sections(students):
     """Assign students to core course sections."""
     # Get core courses
-    core_courses = Course.objects.filter(course_type__in=['Math', 'Science', 'English', 'Social Studies'])
+    core_courses = Course.objects.filter(type='core')
     
     # For each student, assign to appropriate core courses
     for student in students:
         for course in core_courses:
             # Skip if course is not for this student's grade level
-            if course.grade_level and str(student.grade) != str(course.grade_level):
+            if course.grade_level != student.grade_level:
                 continue
             
             # Find sections for this course
@@ -218,20 +226,21 @@ def assign_students_to_core_sections(students):
             min_students = float('inf')
             
             for section in course_sections:
-                section_student_count = section.student_set.count()
-                if section_student_count < min_students and section_student_count < course.capacity:
+                section_student_count = section.students.count()
+                if section_student_count < min_students and section_student_count < course.max_students:
                     min_students = section_student_count
                     best_section = section
             
             # Assign student to best section if found
             if best_section:
-                student.section_set.add(best_section)
+                from ..models import Enrollment
+                Enrollment.objects.get_or_create(student=student, section=best_section)
 
 
 def create_elective_sections(courses, teachers, rooms, periods):
     """Create sections for elective courses."""
-    # Get elective courses (not Math, Science, English, Social Studies)
-    elective_courses = courses.exclude(course_type__in=['Math', 'Science', 'English', 'Social Studies'])
+    # Get elective courses
+    elective_courses = courses.filter(type__in=['elective', 'required_elective', 'language'])
     
     # For each elective course, create the required number of sections
     for course in elective_courses:
@@ -267,8 +276,11 @@ def create_elective_sections(courses, teachers, rooms, periods):
                             continue
                         
                         # Create the section
+                        section_id = f"{course.id}-{i+1}"
                         section = Section(
+                            id=section_id,
                             course=course,
+                            section_number=i+1,
                             teacher=teacher,
                             room=room,
                             period=period
@@ -279,20 +291,25 @@ def create_elective_sections(courses, teachers, rooms, periods):
             
             # If we couldn't find a valid assignment, create an unassigned section
             if not assigned:
-                section = Section(course=course)
+                section_id = f"{course.id}-{i+1}"
+                section = Section(
+                    id=section_id,
+                    course=course,
+                    section_number=i+1
+                )
                 section.save()
 
 
 def assign_students_to_elective_sections(students):
     """Assign students to elective course sections."""
     # Get elective courses
-    elective_courses = Course.objects.exclude(course_type__in=['Math', 'Science', 'English', 'Social Studies'])
+    elective_courses = Course.objects.filter(type__in=['elective', 'required_elective', 'language'])
     
     # For each student, assign to appropriate elective courses
     for student in students:
         # Get periods already assigned to this student
         assigned_periods = set()
-        for section in student.section_set.all():
+        for section in student.sections.all():
             if section.period:
                 assigned_periods.add(section.period.id)
         
@@ -304,7 +321,7 @@ def assign_students_to_elective_sections(students):
                 break
                 
             # Skip if course is not for this student's grade level
-            if course.grade_level and str(student.grade) != str(course.grade_level):
+            if course.grade_level != student.grade_level:
                 continue
             
             # Find sections for this course
@@ -326,14 +343,15 @@ def assign_students_to_elective_sections(students):
                 if section.period.id in assigned_periods:
                     continue
                 
-                section_student_count = section.student_set.count()
-                if section_student_count < min_students and section_student_count < course.capacity:
+                section_student_count = section.students.count()
+                if section_student_count < min_students and section_student_count < course.max_students:
                     min_students = section_student_count
                     best_section = section
             
             # Assign student to best section if found
             if best_section:
-                student.section_set.add(best_section)
+                from ..models import Enrollment
+                Enrollment.objects.get_or_create(student=student, section=best_section)
                 if best_section.period:
                     assigned_periods.add(best_section.period.id)
                 electives_assigned += 1
@@ -358,19 +376,19 @@ def find_schedule_conflicts():
                 # Conflict: Teacher assigned to multiple sections in the same period
                 conflict = {
                     'type': 'teacher',
-                    'description': f"Teacher {teacher.full_name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Teacher {teacher.name} assigned to multiple sections in period {section.period.id}",
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
-                            'room': periods_with_sections[period_id].room.name if periods_with_sections[period_id].room else "Unassigned"
+                            'period': periods_with_sections[period_id].period.id,
+                            'room': periods_with_sections[period_id].room.number if periods_with_sections[period_id].room else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
-                            'room': section.room.name if section.room else "Unassigned"
+                            'period': section.period.id,
+                            'room': section.room.number if section.room else "Unassigned"
                         }
                     ]
                 }
@@ -390,19 +408,19 @@ def find_schedule_conflicts():
                 # Conflict: Room assigned to multiple sections in the same period
                 conflict = {
                     'type': 'room',
-                    'description': f"Room {room.name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Room {room.number} assigned to multiple sections in period {section.period.id}",
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
-                            'teacher': periods_with_sections[period_id].teacher.full_name if periods_with_sections[period_id].teacher else "Unassigned"
+                            'period': periods_with_sections[period_id].period.id,
+                            'teacher': periods_with_sections[period_id].teacher.name if periods_with_sections[period_id].teacher else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
-                            'teacher': section.teacher.full_name if section.teacher else "Unassigned"
+                            'period': section.period.id,
+                            'teacher': section.teacher.name if section.teacher else "Unassigned"
                         }
                     ]
                 }
@@ -413,7 +431,7 @@ def find_schedule_conflicts():
     # Check for student conflicts (student assigned to multiple sections in the same period)
     students = Student.objects.all()
     for student in students:
-        student_sections = student.section_set.exclude(period__isnull=True)
+        student_sections = student.sections.exclude(period__isnull=True)
         periods_with_sections = {}
         
         for section in student_sections:
@@ -422,20 +440,20 @@ def find_schedule_conflicts():
                 # Conflict: Student assigned to multiple sections in the same period
                 conflict = {
                     'type': 'student',
-                    'description': f"Student {student.full_name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Student {student.name} assigned to multiple sections in period {section.period.id}",
                     'student_id': student.id,
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
-                            'teacher': periods_with_sections[period_id].teacher.full_name if periods_with_sections[period_id].teacher else "Unassigned"
+                            'period': periods_with_sections[period_id].period.id,
+                            'teacher': periods_with_sections[period_id].teacher.name if periods_with_sections[period_id].teacher else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
-                            'teacher': section.teacher.full_name if section.teacher else "Unassigned"
+                            'period': section.period.id,
+                            'teacher': section.teacher.name if section.teacher else "Unassigned"
                         }
                     ]
                 }

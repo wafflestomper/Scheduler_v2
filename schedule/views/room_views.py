@@ -7,21 +7,21 @@ from django.db import transaction
 
 def view_rooms(request):
     """View all rooms."""
-    rooms = Room.objects.all().order_by('name')
-    return render(request, 'schedule/rooms/view_rooms.html', {'rooms': rooms})
+    rooms = Room.objects.all().order_by('number')
+    return render(request, 'schedule/view_rooms.html', {'rooms': rooms})
 
 
 def create_room(request):
     """Create a new room."""
     if request.method == 'POST':
-        name = request.POST.get('name')
+        number = request.POST.get('number')
         capacity = request.POST.get('capacity')
-        room_type = request.POST.get('room_type', '')
+        room_type = request.POST.get('type', 'classroom')
         
         try:
             # Validate input
-            if not name:
-                raise ValueError("Room name is required")
+            if not number:
+                raise ValueError("Room number is required")
             
             try:
                 capacity = int(capacity) if capacity else 30  # Default capacity of 30
@@ -32,22 +32,26 @@ def create_room(request):
             
             # Create the room
             with transaction.atomic():
+                # Generate a room ID based on the room number
+                room_id = f"R{Room.objects.count() + 1:03d}"
+                
                 room = Room(
-                    name=name,
+                    id=room_id,
+                    number=number,
                     capacity=capacity,
-                    room_type=room_type
+                    type=room_type
                 )
                 room.save()
                 
-                messages.success(request, f"Room '{name}' created successfully!")
+                messages.success(request, f"Room '{number}' created successfully!")
                 return redirect('view_rooms')
                 
         except ValueError as e:
             messages.error(request, str(e))
             
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/rooms/create_room.html', {
-        'room_types': Room.ROOM_TYPES if hasattr(Room, 'ROOM_TYPES') else []
+    return render(request, 'schedule/create_room.html', {
+        'room_types': Room.ROOM_TYPES
     })
 
 
@@ -56,14 +60,14 @@ def edit_room(request, room_id):
     room = get_object_or_404(Room, pk=room_id)
     
     if request.method == 'POST':
-        name = request.POST.get('name')
+        number = request.POST.get('number')
         capacity = request.POST.get('capacity')
-        room_type = request.POST.get('room_type', '')
+        room_type = request.POST.get('type', 'classroom')
         
         try:
             # Validate input
-            if not name:
-                raise ValueError("Room name is required")
+            if not number:
+                raise ValueError("Room number is required")
             
             try:
                 capacity = int(capacity) if capacity else 30
@@ -74,21 +78,21 @@ def edit_room(request, room_id):
             
             # Update the room
             with transaction.atomic():
-                room.name = name
+                room.number = number
                 room.capacity = capacity
-                room.room_type = room_type
+                room.type = room_type
                 room.save()
                 
-                messages.success(request, f"Room '{name}' updated successfully!")
+                messages.success(request, f"Room '{number}' updated successfully!")
                 return redirect('view_rooms')
                 
         except ValueError as e:
             messages.error(request, str(e))
     
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/rooms/edit_room.html', {
+    return render(request, 'schedule/edit_room.html', {
         'room': room,
-        'room_types': Room.ROOM_TYPES if hasattr(Room, 'ROOM_TYPES') else []
+        'room_types': Room.ROOM_TYPES
     })
 
 
@@ -98,13 +102,13 @@ def delete_room(request, room_id):
     
     if request.method == 'POST':
         # Check if there are any sections using this room
-        if room.section_set.exists():
-            messages.error(request, f"Cannot delete room '{room.name}' because it has sections assigned to it.")
+        if room.sections.exists():
+            messages.error(request, f"Cannot delete room '{room.number}' because it has sections assigned to it.")
             return redirect('view_rooms')
         
-        room_name = room.name
+        room_number = room.number
         room.delete()
-        messages.success(request, f"Room '{room_name}' deleted successfully!")
+        messages.success(request, f"Room '{room_number}' deleted successfully!")
         return redirect('view_rooms')
     
-    return render(request, 'schedule/rooms/confirm_delete.html', {'room': room}) 
+    return render(request, 'schedule/delete_room_confirm.html', {'room': room}) 

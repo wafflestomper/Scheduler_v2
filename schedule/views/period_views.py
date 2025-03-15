@@ -3,25 +3,28 @@ from django.contrib import messages
 from django.views import View
 from ..models import Period
 from django.db import transaction
+from datetime import datetime, time
 
 
 def view_periods(request):
     """View all periods."""
-    periods = Period.objects.all().order_by('start_time')
-    return render(request, 'schedule/periods/view_periods.html', {'periods': periods})
+    periods = Period.objects.all().order_by('slot', 'start_time')
+    return render(request, 'schedule/view_periods.html', {'periods': periods})
 
 
 def create_period(request):
     """Create a new period."""
     if request.method == 'POST':
-        name = request.POST.get('name')
+        period_name = request.POST.get('period_name', '')
+        days = request.POST.get('days', 'M')
+        slot = request.POST.get('slot')
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
         
         try:
             # Validate input
-            if not name:
-                raise ValueError("Period name is required")
+            if not slot:
+                raise ValueError("Period slot is required")
             
             if not start_time:
                 raise ValueError("Start time is required")
@@ -30,8 +33,6 @@ def create_period(request):
                 raise ValueError("End time is required")
             
             # Validate that start_time comes before end_time
-            from datetime import datetime
-            
             try:
                 start_datetime = datetime.strptime(start_time, '%H:%M')
                 end_datetime = datetime.strptime(end_time, '%H:%M')
@@ -44,33 +45,32 @@ def create_period(request):
                 else:
                     raise
             
-            # Check for overlapping periods
-            periods = Period.objects.all()
-            for period in periods:
-                period_start = datetime.strptime(period.start_time, '%H:%M')
-                period_end = datetime.strptime(period.end_time, '%H:%M')
-                
-                # Check if the new period overlaps with an existing period
-                if (start_datetime < period_end and end_datetime > period_start):
-                    raise ValueError(f"This period overlaps with existing period '{period.name}'")
-            
             # Create the period
             with transaction.atomic():
+                # Generate a period ID based on the slot
+                period_id = f"P{Period.objects.count() + 1:03d}"
+                
                 period = Period(
-                    name=name,
+                    id=period_id,
+                    period_name=period_name,
+                    days=days,
+                    slot=slot,
                     start_time=start_time,
                     end_time=end_time
                 )
                 period.save()
                 
-                messages.success(request, f"Period '{name}' created successfully!")
+                display_name = period_name if period_name else f"Period {slot}"
+                messages.success(request, f"{display_name} created successfully!")
                 return redirect('view_periods')
                 
         except ValueError as e:
             messages.error(request, str(e))
             
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/periods/create_period.html')
+    return render(request, 'schedule/create_period.html', {
+        'day_choices': Period.DAY_CHOICES
+    })
 
 
 def edit_period(request, period_id):
@@ -78,14 +78,16 @@ def edit_period(request, period_id):
     period = get_object_or_404(Period, pk=period_id)
     
     if request.method == 'POST':
-        name = request.POST.get('name')
+        period_name = request.POST.get('period_name', '')
+        days = request.POST.get('days', 'M')
+        slot = request.POST.get('slot')
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
         
         try:
             # Validate input
-            if not name:
-                raise ValueError("Period name is required")
+            if not slot:
+                raise ValueError("Period slot is required")
             
             if not start_time:
                 raise ValueError("Start time is required")
@@ -94,8 +96,6 @@ def edit_period(request, period_id):
                 raise ValueError("End time is required")
             
             # Validate that start_time comes before end_time
-            from datetime import datetime
-            
             try:
                 start_datetime = datetime.strptime(start_time, '%H:%M')
                 end_datetime = datetime.strptime(end_time, '%H:%M')
@@ -108,31 +108,27 @@ def edit_period(request, period_id):
                 else:
                     raise
             
-            # Check for overlapping periods, excluding this period
-            periods = Period.objects.exclude(pk=period_id)
-            for p in periods:
-                p_start = datetime.strptime(p.start_time, '%H:%M')
-                p_end = datetime.strptime(p.end_time, '%H:%M')
-                
-                # Check if the edited period overlaps with an existing period
-                if (start_datetime < p_end and end_datetime > p_start):
-                    raise ValueError(f"This period overlaps with existing period '{p.name}'")
-            
             # Update the period
             with transaction.atomic():
-                period.name = name
+                period.period_name = period_name
+                period.days = days
+                period.slot = slot
                 period.start_time = start_time
                 period.end_time = end_time
                 period.save()
                 
-                messages.success(request, f"Period '{name}' updated successfully!")
+                display_name = period_name if period_name else f"Period {slot}"
+                messages.success(request, f"{display_name} updated successfully!")
                 return redirect('view_periods')
                 
         except ValueError as e:
             messages.error(request, str(e))
     
     # For GET request or if there was an error in POST
-    return render(request, 'schedule/periods/edit_period.html', {'period': period})
+    return render(request, 'schedule/edit_period.html', {
+        'period': period,
+        'day_choices': Period.DAY_CHOICES
+    })
 
 
 def delete_period(request, period_id):
@@ -141,13 +137,13 @@ def delete_period(request, period_id):
     
     if request.method == 'POST':
         # Check if there are any sections using this period
-        if period.section_set.exists():
-            messages.error(request, f"Cannot delete period '{period.name}' because it has sections assigned to it.")
+        if period.sections.exists():
+            messages.error(request, f"Cannot delete period '{period}' because it has sections assigned to it.")
             return redirect('view_periods')
         
-        period_name = period.name
+        period_name = str(period)
         period.delete()
-        messages.success(request, f"Period '{period_name}' deleted successfully!")
+        messages.success(request, f"{period_name} deleted successfully!")
         return redirect('view_periods')
     
-    return render(request, 'schedule/periods/confirm_delete.html', {'period': period}) 
+    return render(request, 'schedule/delete_period_confirm.html', {'period': period}) 
