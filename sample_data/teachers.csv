@@ -1,0 +1,9 @@
+teacher_id,name,availability,subjects
+T001,Ms. Smith,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Math|Science
+T002,Mr. Johnson,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,English|Social Studies
+T003,Mrs. Brown,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Math|Science
+T004,Mr. Davis,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,English|Social Studies
+T005,Ms. Wilson,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Art|Music
+T006,Mr. Taylor,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Physical Education|Health
+T007,Mrs. Anderson,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Robotics|Coding
+T008,Mr. Martinez,M1-M6|T1-T6|W1-W6|TH1-TH6|F1-F6,Drama|Music 

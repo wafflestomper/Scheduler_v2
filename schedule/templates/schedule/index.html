@@ -1,0 +1,92 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}School Scheduler - Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to the School Scheduler</h1>
+    <p class="lead">A tool for middle school scheduling that helps manage students, teachers, rooms, and courses.</p>
+    <hr class="my-4">
+    <p>Get started by uploading your CSV data files or reviewing existing schedules.</p>
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Upload Data</h5>
+                    <p class="card-text">Import data using CSV files for students, teachers, rooms, and courses.</p>
+                    <a href="{% url 'csv_upload' %}" class="btn btn-primary">Upload CSV</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Generate Schedules</h5>
+                    <p class="card-text">Run the scheduling algorithm to create conflict-free schedules.</p>
+                    <a href="{% url 'schedule_generation' %}" class="btn btn-primary">Generate</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">View Schedules</h5>
+                    <p class="card-text">Review and edit the master schedule or individual student schedules.</p>
+                    <a href="{% url 'master_schedule' %}" class="btn btn-primary">View Master Schedule</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Data Summary
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Students
+                        <span class="badge bg-primary rounded-pill">{{ num_students }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Teachers
+                        <span class="badge bg-primary rounded-pill">{{ num_teachers }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Rooms
+                        <span class="badge bg-primary rounded-pill">{{ num_rooms }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Courses
+                        <span class="badge bg-primary rounded-pill">{{ num_courses }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Sections
+                        <span class="badge bg-primary rounded-pill">{{ num_sections }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Quick Guide
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">How to use the scheduler</h5>
+                <ol>
+                    <li>Upload CSV files with your data (students, teachers, rooms, courses)</li>
+                    <li>Generate schedules using the scheduling algorithm</li>
+                    <li>Review the master schedule and student schedules</li>
+                    <li>Manually adjust schedules if needed to resolve conflicts</li>
+                    <li>Export schedules as CSV files</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

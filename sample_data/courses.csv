@@ -1,0 +1,31 @@
+course_id,name,type,grade,max_students,teachers
+C001,Math 6,core,6,30,T001|T003
+C002,English 6,core,6,30,T002|T004
+C003,Science 6,core,6,30,T001|T003
+C004,Social Studies 6,core,6,30,T002|T004
+C005,Math 7,core,7,30,T001|T003
+C006,English 7,core,7,30,T002|T004
+C007,Science 7,core,7,30,T001|T003
+C008,Social Studies 7,core,7,30,T002|T004
+C009,Math 8,core,8,30,T001|T003
+C010,English 8,core,8,30,T002|T004
+C011,Science 8,core,8,30,T001|T003
+C012,Social Studies 8,core,8,30,T002|T004
+C013,Art,elective,6,20,T005
+C014,Music,elective,6,20,T005|T008
+C015,Drama,elective,6,20,T008
+C016,Robotics,elective,6,20,T007
+C017,Coding,elective,6,20,T007
+C018,Art,elective,7,20,T005
+C019,Music,elective,7,20,T005|T008
+C020,Drama,elective,7,20,T008
+C021,Robotics,elective,7,20,T007
+C022,Coding,elective,7,20,T007
+C023,Art,elective,8,20,T005
+C024,Music,elective,8,20,T005|T008
+C025,Drama,elective,8,20,T008
+C026,Robotics,elective,8,20,T007
+C027,Coding,elective,8,20,T007
+C028,Physical Education 6,required_elective,6,40,T006
+C029,Physical Education 7,required_elective,7,40,T006
+C030,Physical Education 8,required_elective,8,40,T006 

@@ -1,0 +1,116 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Master Schedule{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2>Master Schedule</h2>
+        <div>
+            <a href="{% url 'export_master_schedule' %}" class="btn btn-success">Export to CSV</a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if not schedule_by_period %}
+        <div class="alert alert-info">
+            No schedules have been generated yet. <a href="{% url 'schedule_generation' %}">Generate schedules</a> to see the master schedule.
+        </div>
+        {% else %}
+        
+        <div id="conflicts-container" class="mb-4" style="display: none;">
+            <div class="alert alert-danger">
+                <h5><i class="bi bi-exclamation-triangle"></i> Schedule Conflicts</h5>
+                <div id="conflicts-list"></div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th>Sections</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for period_id, data in schedule_by_period.items %}
+                    <tr>
+                        <td>{{ data.period }}</td>
+                        <td>
+                            <div class="row">
+                                {% for section in data.sections %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="card section-card" id="section-{{ section.id }}">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ section.course.name }}</h5>
+                                            <p class="card-text">
+                                                <strong>Teacher:</strong> {{ section.teacher.name }}<br>
+                                                <strong>Room:</strong> {{ section.room.number }}<br>
+                                                <strong>Students:</strong> {{ section.get_students_list|length }}
+                                            </p>
+                                            <a href="{% url 'edit_section' section.id %}" class="btn btn-sm btn-primary">Edit</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12">
+                                    <p class="text-muted">No sections scheduled for this period.</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Fetch conflicts when the page loads
+        $.getJSON("{% url 'get_conflicts' %}", function(data) {
+            if (data.conflicts && data.conflicts.length > 0) {
+                $('#conflicts-container').show();
+                let conflictsList = $('#conflicts-list');
+                
+                // Group conflicts by type
+                let teacherConflicts = data.conflicts.filter(c => c.type === 'teacher_conflict');
+                let roomConflicts = data.conflicts.filter(c => c.type === 'room_conflict');
+                let studentConflicts = data.conflicts.filter(c => c.type === 'student_conflict');
+                
+                if (teacherConflicts.length > 0) {
+                    conflictsList.append('<h6>Teacher Conflicts:</h6>');
+                    let ul = $('<ul></ul>');
+                    teacherConflicts.forEach(function(conflict) {
+                        ul.append(`<li>Teacher ${conflict.teacher} is assigned to multiple sections in ${conflict.period}: ${conflict.sections.join(', ')}</li>`);
+                    });
+                    conflictsList.append(ul);
+                }
+                
+                if (roomConflicts.length > 0) {
+                    conflictsList.append('<h6>Room Conflicts:</h6>');
+                    let ul = $('<ul></ul>');
+                    roomConflicts.forEach(function(conflict) {
+                        ul.append(`<li>Room ${conflict.room} is double-booked in ${conflict.period}: ${conflict.sections.join(', ')}</li>`);
+                    });
+                    conflictsList.append(ul);
+                }
+                
+                if (studentConflicts.length > 0) {
+                    conflictsList.append('<h6>Student Conflicts:</h6>');
+                    let ul = $('<ul></ul>');
+                    studentConflicts.forEach(function(conflict) {
+                        ul.append(`<li>Student ${conflict.student} is assigned to multiple sections in ${conflict.period}: ${conflict.sections.join(', ')}</li>`);
+                    });
+                    conflictsList.append(ul);
+                }
+            }
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,16 @@
+student_id,name,grade,elective_prefs
+S001,John Smith,6,Art|Robotics
+S002,Emily Johnson,6,Music|Art
+S003,Michael Brown,6,Robotics|Coding
+S004,Sarah Davis,6,Art|Drama
+S005,David Wilson,6,Coding|Robotics
+S006,Jessica Taylor,7,Music|Drama
+S007,Daniel Anderson,7,Robotics|Coding
+S008,Olivia Martinez,7,Art|Music
+S009,James Thomas,7,Drama|Art
+S010,Sophia Garcia,7,Coding|Music
+S011,William Rodriguez,8,Art|Robotics
+S012,Ava Lopez,8,Music|Drama
+S013,Alexander Lee,8,Robotics|Coding
+S014,Mia Gonzalez,8,Drama|Art
+S015,Benjamin Perez,8,Coding|Music 

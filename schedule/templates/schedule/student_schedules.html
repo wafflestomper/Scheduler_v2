@@ -1,0 +1,126 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Student Schedules{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2>Student Schedules</h2>
+        <div>
+            <a href="{% url 'export_student_schedules' %}" class="btn btn-success">Export to CSV</a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if not student_schedules %}
+        <div class="alert alert-info">
+            No schedules have been generated yet. <a href="{% url 'schedule_generation' %}">Generate schedules</a> to see student schedules.
+        </div>
+        {% else %}
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="student-search" class="form-control" placeholder="Search for a student...">
+                    <button class="btn btn-outline-secondary" type="button" id="clear-search">Clear</button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select id="grade-filter" class="form-select">
+                    <option value="">All Grades</option>
+                    <option value="6">Grade 6</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="accordion" id="studentAccordion">
+            {% for student_id, data in student_schedules.items %}
+            <div class="accordion-item student-item" data-student-name="{{ data.student.name|lower }}" data-grade="{{ data.student.grade_level }}">
+                <h2 class="accordion-header" id="heading-{{ student_id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ student_id }}" aria-expanded="false" aria-controls="collapse-{{ student_id }}">
+                        {{ data.student.name }} - Grade {{ data.student.grade_level }}
+                    </button>
+                </h2>
+                <div id="collapse-{{ student_id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ student_id }}" data-bs-parent="#studentAccordion">
+                    <div class="accordion-body">
+                        {% if data.schedule %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Course</th>
+                                        <th>Teacher</th>
+                                        <th>Room</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for section in data.schedule %}
+                                    <tr>
+                                        <td>{{ section.period }}</td>
+                                        <td>{{ section.course.name }}</td>
+                                        <td>{{ section.teacher.name }}</td>
+                                        <td>{{ section.room.number }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            No courses have been assigned to this student yet.
+                        </div>
+                        {% endif %}
+                        
+                        <h5 class="mt-3">Preferences</h5>
+                        {% if data.student.preferences %}
+                        <ul>
+                            {% for pref in data.student.get_preferences_list %}
+                            <li>{{ pref }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No preferences specified.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Student search functionality
+        $("#student-search").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $(".student-item").filter(function() {
+                $(this).toggle($(this).data("student-name").indexOf(value) > -1);
+            });
+        });
+        
+        // Clear search
+        $("#clear-search").on("click", function() {
+            $("#student-search").val("");
+            $(".student-item").show();
+            $("#grade-filter").val("");
+        });
+        
+        // Grade filter
+        $("#grade-filter").on("change", function() {
+            var grade = $(this).val();
+            if (grade) {
+                $(".student-item").hide();
+                $(".student-item[data-grade='" + grade + "']").show();
+            } else {
+                $(".student-item").show();
+            }
+        });
+    });
+</script>
+{% endblock %} 

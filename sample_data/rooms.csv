@@ -1,0 +1,11 @@
+room_id,number,capacity,type
+R001,101,30,classroom
+R002,102,30,classroom
+R003,103,30,classroom
+R004,104,30,classroom
+R005,201,25,lab
+R006,202,25,lab
+R007,301,40,gym
+R008,302,20,art
+R009,303,20,music
+R010,304,20,classroom 

@@ -1,0 +1,42 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Generate Schedules{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Generate Schedules</h2>
+    </div>
+    <div class="card-body">
+        <p class="alert alert-warning">
+            <strong>Warning:</strong> Generating schedules will delete all existing section assignments. This action cannot be undone.
+        </p>
+        
+        <h4>Before generating schedules, please ensure:</h4>
+        <ul>
+            <li>You have uploaded all required data (students, teachers, rooms, courses, periods)</li>
+            <li>All students have appropriate grade levels and elective preferences</li>
+            <li>All teachers have their subject specializations and availability set</li>
+            <li>All rooms have capacity and type information</li>
+            <li>All courses have appropriate type, grade level, and teacher eligibility</li>
+        </ul>
+        
+        <h4>The scheduling algorithm will:</h4>
+        <ul>
+            <li>Create sections for all core courses based on grade levels</li>
+            <li>Assign students to core courses for their grade level</li>
+            <li>Create sections for elective courses</li>
+            <li>Assign students to elective courses based on their preferences</li>
+            <li>Ensure no teacher is teaching multiple classes in the same period</li>
+            <li>Ensure no room is double-booked in the same period</li>
+            <li>Ensure no student is assigned to multiple classes in the same period</li>
+        </ul>
+        
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Generate Schedules</button>
+            <a href="{% url 'index' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %} 
