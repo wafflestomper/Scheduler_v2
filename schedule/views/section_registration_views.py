@@ -1,13 +1,15 @@
 import json
 import random
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import Count, Q, F
 from schedule.models import Student, Course, Section, CourseEnrollment, Enrollment, Period
 
 def section_registration(request):
     """View for managing section registration for enrolled students"""
+    print("DEBUG: section_registration view was called!")
+    
     # Get all course enrollments that don't have section assignments
     unassigned_enrollments = CourseEnrollment.objects.filter(
         ~Q(student__sections__course=F('course'))
@@ -33,12 +35,12 @@ def section_registration(request):
     
     for section in sections:
         enrolled_count = section.students.count()
-        remaining_capacity = section.capacity - enrolled_count if section.capacity else None
+        remaining_capacity = section.max_size - enrolled_count if section.max_size else None
         
         section_stats.append({
             'section': section,
             'enrolled_count': enrolled_count,
-            'capacity': section.capacity,
+            'capacity': section.max_size,
             'remaining_capacity': remaining_capacity
         })
     
@@ -127,7 +129,7 @@ def initial_assignment_phase(course_id=None):
             section_capacities = {}
             for section in sections:
                 enrolled_count = section.students.count()
-                max_capacity = section.capacity if section.capacity else float('inf')
+                max_capacity = section.max_size if section.max_size else float('inf')
                 available = max_capacity - enrolled_count
                 
                 section_capacities[section.id] = {
@@ -261,7 +263,7 @@ def find_alternate_section(student, course, exclude_period=None):
     # Also check capacity constraints
     available_sections = []
     for section in Section.objects.filter(query):
-        if section.capacity is None or section.students.count() < section.capacity:
+        if section.max_size is None or section.students.count() < section.max_size:
             available_sections.append(section)
     
     if available_sections:
