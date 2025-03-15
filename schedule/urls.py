@@ -31,7 +31,7 @@ from .views.enrollment_views import (
     batch_disenroll_students, assign_students_to_sections
 )
 from .views.section_registration_views import (
-    section_registration, assign_sections
+    section_registration, assign_sections, deregister_all_sections
 )
 
 urlpatterns = [
@@ -77,4 +77,5 @@ urlpatterns = [
     # Section registration
     path('section-registration/', section_registration, name='section_registration'),
     path('api/assign-sections/', assign_sections, name='assign_sections'),
+    path('api/deregister-all-sections/', deregister_all_sections, name='deregister_all_sections'),
 ] 

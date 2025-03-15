@@ -52,13 +52,13 @@
                         <li class="nav-item">
                             <a class="nav-link {% if '/periods/' in request.path %}active{% endif %}" href="{% url 'view_periods' %}">Periods</a>
                         </li>
-                        <li class="nav-item {% if request.path|startswith:'/enroll-students/' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'enroll_students' %}">
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/enroll-students/' in request.path %}active{% endif %}" href="{% url 'enroll_students' %}">
                                 <i class="bi bi-person-plus-fill"></i> Enrollments
                             </a>
                         </li>
-                        <li class="nav-item {% if request.path|startswith:'/section-registration/' %}active{% endif %}">
-                            <a class="nav-link" href="{% url 'section_registration' %}">
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/section-registration/' in request.path %}active{% endif %}" href="{% url 'section_registration' %}">
                                 <i class="bi bi-distribute-vertical"></i> Section Registration
                             </a>
                         </li>
