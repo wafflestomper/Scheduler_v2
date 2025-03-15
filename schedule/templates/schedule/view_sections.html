@@ -68,7 +68,7 @@
                                             <td>{{ section.room }}</td>
                                             <td>{{ section.when }}</td>
                                             <td>
-                                                <a href="{% url 'section_roster' section_id=section.id %}" class="btn btn-sm btn-info">
+                                                <a href="{% url 'section_roster' course_id=course_id %}" class="btn btn-sm btn-info">
                                                     <i class="bi bi-people"></i> {{ section.students_count }}
                                                 </a>
                                             </td>
