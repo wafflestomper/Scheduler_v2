@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Teacher, Room, Student, Course, Period, Section
+from .models import Teacher, Room, Student, Course, Period, Section, Enrollment, CourseEnrollment, CourseGroup
 
 @admin.register(Teacher)
 class TeacherAdmin(admin.ModelAdmin):
@@ -35,3 +35,21 @@ class SectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'course', 'teacher', 'room', 'period', 'when')
     search_fields = ('course__name', 'teacher__name', 'room__number')
     list_filter = ('course__type', 'teacher', 'room', 'period', 'when')
+
+@admin.register(Enrollment)
+class EnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('student', 'section', 'date_enrolled')
+    search_fields = ('student__name', 'section__course__name')
+    list_filter = ('section__course__type', 'date_enrolled')
+
+@admin.register(CourseEnrollment)
+class CourseEnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'date_enrolled')
+    search_fields = ('student__name', 'course__name')
+    list_filter = ('course__type', 'date_enrolled')
+
+@admin.register(CourseGroup)
+class CourseGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'get_courses_count', 'preferred_period')
+    search_fields = ('name', 'description')
+    filter_horizontal = ('courses',)

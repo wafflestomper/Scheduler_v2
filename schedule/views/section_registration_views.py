@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.db.models import Count, Q, F
-from schedule.models import Student, Course, Section, CourseEnrollment, Enrollment, Period
+from schedule.models import Student, Course, Section, CourseEnrollment, Enrollment, Period, CourseGroup
 
 def section_registration(request):
     """View for managing section registration for enrolled students"""
@@ -89,6 +89,15 @@ def perfect_balance_assignment(course_id=None):
                 'message': 'No courses found for section assignment'
             }
         
+        # Get all course groups for special scheduling
+        course_groups = CourseGroup.objects.prefetch_related('courses').all()
+        course_group_mappings = {}
+        
+        # Create mappings of courses to their groups for quick lookup
+        for group in course_groups:
+            for course in group.courses.all():
+                course_group_mappings[course.id] = group
+        
         # Tracking results
         assignments_count = 0
         failures_count = 0
@@ -99,6 +108,10 @@ def perfect_balance_assignment(course_id=None):
         # Process each course
         for course in courses:
             print(f"DEBUG: Processing course {course.name}")
+            
+            # Check if this course is part of a course group (for trimester/quarter courses)
+            is_grouped_course = course.id in course_group_mappings
+            course_group = course_group_mappings.get(course.id)
             
             # 1. Get all students enrolled in this course
             enrolled_students = CourseEnrollment.objects.filter(
@@ -132,7 +145,8 @@ def perfect_balance_assignment(course_id=None):
                     'section': section,
                     'current_enrollment': 0,
                     'max_capacity': max_capacity,
-                    'period_id': section.period_id if section.period else None
+                    'period_id': section.period_id if section.period else None,
+                    'when': section.when  # Add the when attribute for trimester/quarter scheduling
                 })
             
             # 5. Calculate ideal distribution
@@ -146,8 +160,109 @@ def perfect_balance_assignment(course_id=None):
             students_to_assign = list(enrolled_students)
             students_to_assign.sort(key=lambda e: e.student.id)
             
-            # 7. First phase: Assign students to sections to minimize the maximum enrollment
-            # This ensures we don't overload any section if it can be avoided
+            # 7. Special handling for grouped courses (trimester/quarter language courses)
+            if is_grouped_course:
+                print(f"DEBUG: Course {course.name} is part of group: {course_group.name}")
+                
+                # Get students who are enrolled in all courses in this group
+                students_enrolled_in_all = []
+                for student_enrollment in students_to_assign:
+                    student = student_enrollment.student
+                    # Count how many courses in this group the student is enrolled in
+                    enrolled_count = CourseEnrollment.objects.filter(
+                        student=student,
+                        course__in=course_group.courses.all()
+                    ).count()
+                    
+                    # If enrolled in all courses in the group, add to special handling list
+                    if enrolled_count == course_group.courses.count():
+                        students_enrolled_in_all.append(student_enrollment)
+                
+                print(f"DEBUG: {len(students_enrolled_in_all)} students are enrolled in all courses in this group")
+                
+                # Process these students separately
+                for enrollment in students_enrolled_in_all:
+                    student = enrollment.student
+                    
+                    # Find sections for each time segment (t1, t2, t3) with the same period
+                    # Start by getting the student's current assignments in other courses of the group
+                    student_group_assignments = {}
+                    for group_course in course_group.courses.all():
+                        if group_course.id == course.id:
+                            continue  # Skip the current course
+                        
+                        # Check if student is already assigned to a section for this course
+                        student_section_assignments = Enrollment.objects.filter(
+                            student=student,
+                            section__course=group_course
+                        ).select_related('section')
+                        
+                        for assignment in student_section_assignments:
+                            # Track the assigned period and trimester
+                            student_group_assignments[assignment.section.when] = assignment.section.period_id
+                    
+                    # Determine which trimesters/quarters are already assigned
+                    assigned_when_values = student_group_assignments.keys()
+                    assigned_periods = list(student_group_assignments.values())
+                    
+                    # Find the appropriate section based on period and time segment
+                    found_section = False
+                    
+                    # First check if student has existing assignments in the group
+                    if assigned_periods:
+                        # Try to find a section with the same period but different time segment
+                        matching_period_sections = [
+                            s for s in section_data 
+                            if s['period_id'] in assigned_periods and 
+                               s['when'] not in assigned_when_values and
+                               s['current_enrollment'] < s['max_capacity']
+                        ]
+                        
+                        if matching_period_sections:
+                            # Choose the section with lowest enrollment
+                            best_section = min(matching_period_sections, key=lambda s: s['current_enrollment'])
+                            
+                            # Create enrollment
+                            Enrollment.objects.create(
+                                student=student,
+                                section=best_section['section']
+                            )
+                            
+                            # Update section counts
+                            best_section['current_enrollment'] += 1
+                            assignments_count += 1
+                            found_section = True
+                            
+                            print(f"DEBUG: Group scheduling - Assigned {student.name} to {course.name} section {best_section['section'].id} ({best_section['when']})")
+                    
+                    # If no matching section found or no existing assignments, find any available section
+                    if not found_section:
+                        # Find any section with capacity
+                        available_sections = [s for s in section_data if s['current_enrollment'] < s['max_capacity']]
+                        
+                        if available_sections:
+                            # Choose section with lowest enrollment
+                            best_section = min(available_sections, key=lambda s: s['current_enrollment'])
+                            
+                            # Create enrollment
+                            Enrollment.objects.create(
+                                student=student,
+                                section=best_section['section']
+                            )
+                            
+                            # Update section counts
+                            best_section['current_enrollment'] += 1
+                            assignments_count += 1
+                            
+                            print(f"DEBUG: Group scheduling fallback - Assigned {student.name} to {course.name} section {best_section['section'].id} ({best_section['when']})")
+                        else:
+                            failures_count += 1
+                            errors.append(f"No available sections for {student.name} in {course.name}")
+                    
+                    # Remove this student from the main assignment list
+                    students_to_assign.remove(enrollment)
+            
+            # 8. First phase: Assign remaining students to sections to minimize the maximum enrollment
             student_schedule_conflicts = []
             
             for enrollment in students_to_assign:
@@ -192,7 +307,7 @@ def perfect_balance_assignment(course_id=None):
                 
                 print(f"DEBUG: Assigned {student.name} to section {best_section['section'].id}, now has {best_section['current_enrollment']} students")
             
-            # 8. Handle students with schedule conflicts by trying alternate sections
+            # 9. Handle students with schedule conflicts by trying alternate sections
             # We might need to break some constraints to assign all students
             for enrollment in student_schedule_conflicts:
                 student = enrollment.student
@@ -239,7 +354,7 @@ def perfect_balance_assignment(course_id=None):
                     failures_count += 1
                     errors.append(f"All sections at capacity for {student.name} in {course.name}")
             
-            # 9. Log final distribution
+            # 10. Log final distribution
             print(f"DEBUG: Final distribution for {course.name}:")
             for section_info in section_data:
                 print(f"  Section {section_info['section'].id}: {section_info['current_enrollment']} students")

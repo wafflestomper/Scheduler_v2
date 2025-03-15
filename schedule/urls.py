@@ -2,13 +2,14 @@ from django.urls import path
 from .views.main_views import index
 from .views.student_views import (
     view_students, student_detail, edit_student, delete_student,
-    export_student_schedules
+    export_student_schedules, student_list, add_student, bulk_upload_students, download_student_template
 )
 from .views.course_views import (
-    view_courses, create_course, edit_course, delete_course
+    view_courses, create_course, edit_course, delete_course,
+    course_list, course_groups, create_course_group, edit_course_group, delete_course_group
 )
 from .views.teacher_views import (
-    view_teachers, create_teacher, edit_teacher, delete_teacher
+    view_teachers, create_teacher, edit_teacher, delete_teacher, teacher_list, add_teacher
 )
 from .views.room_views import (
     view_rooms, create_room, edit_room, delete_room
@@ -78,4 +79,10 @@ urlpatterns = [
     path('section-registration/', section_registration, name='section_registration'),
     path('api/assign-sections/', assign_sections, name='assign_sections'),
     path('api/deregister-all-sections/', deregister_all_sections, name='deregister_all_sections'),
+    
+    # Course Groups
+    path('course-groups/', course_groups, name='course_groups'),
+    path('course-groups/create/', create_course_group, name='create_course_group'),
+    path('course-groups/<int:group_id>/edit/', edit_course_group, name='edit_course_group'),
+    path('course-groups/<int:group_id>/delete/', delete_course_group, name='delete_course_group'),
 ] 

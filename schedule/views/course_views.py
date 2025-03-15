@@ -3,6 +3,12 @@ from django.contrib import messages
 from django.views import View
 from ..models import Course
 from django.db import transaction
+from django.core.paginator import Paginator
+from django.http import HttpResponse, JsonResponse
+import csv
+import io
+
+from schedule.models import CourseGroup, Period
 
 
 def view_courses(request):
@@ -149,4 +155,154 @@ def delete_course(request, course_id):
         messages.success(request, f"Course '{course_name}' deleted successfully!")
         return redirect('view_courses')
     
-    return render(request, 'schedule/delete_course_confirm.html', {'course': course}) 
+    return render(request, 'schedule/delete_course_confirm.html', {'course': course})
+
+
+def course_list(request):
+    """View for listing all courses"""
+    courses = Course.objects.all().order_by('grade_level', 'name')
+    
+    # Filter by grade level if provided
+    grade_level = request.GET.get('grade_level')
+    if grade_level:
+        try:
+            grade_level = int(grade_level)
+            courses = courses.filter(grade_level=grade_level)
+        except ValueError:
+            # Invalid grade level, ignore filter
+            pass
+    
+    # Filter by course type if provided
+    course_type = request.GET.get('type')
+    if course_type:
+        courses = courses.filter(type=course_type)
+    
+    # Pagination
+    paginator = Paginator(courses, 20)  # 20 courses per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'course_types': [choice[0] for choice in Course.COURSE_TYPES],
+        'grade_level': grade_level,
+        'course_type': course_type
+    }
+    
+    return render(request, 'schedule/course_list.html', context)
+
+
+def course_groups(request):
+    """View for managing course groups (related language courses)"""
+    groups = CourseGroup.objects.all().prefetch_related('courses').order_by('name')
+    periods = Period.objects.all().order_by('slot')
+    
+    context = {
+        'groups': groups,
+        'periods': periods
+    }
+    
+    return render(request, 'schedule/course_groups.html', context)
+
+
+def create_course_group(request):
+    """Handle creation of a new course group"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        period_id = request.POST.get('preferred_period')
+        course_ids = request.POST.getlist('courses')
+        
+        if not name:
+            messages.error(request, 'Group name is required')
+            return redirect('course_groups')
+        
+        # Create group
+        group = CourseGroup(
+            name=name,
+            description=description
+        )
+        
+        # Set preferred period if provided
+        if period_id:
+            try:
+                period = Period.objects.get(id=period_id)
+                group.preferred_period = period
+            except Period.DoesNotExist:
+                pass
+        
+        group.save()
+        
+        # Add courses
+        if course_ids:
+            courses = Course.objects.filter(id__in=course_ids)
+            group.courses.add(*courses)
+        
+        messages.success(request, f'Course group "{name}" created successfully')
+        return redirect('course_groups')
+    
+    return redirect('course_groups')
+
+
+def edit_course_group(request, group_id):
+    """Handle editing of a course group"""
+    group = get_object_or_404(CourseGroup, id=group_id)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        period_id = request.POST.get('preferred_period')
+        course_ids = request.POST.getlist('courses')
+        
+        if not name:
+            messages.error(request, 'Group name is required')
+            return redirect('course_groups')
+        
+        # Update group
+        group.name = name
+        group.description = description
+        
+        # Set preferred period if provided
+        if period_id:
+            try:
+                period = Period.objects.get(id=period_id)
+                group.preferred_period = period
+            except Period.DoesNotExist:
+                group.preferred_period = None
+        else:
+            group.preferred_period = None
+        
+        group.save()
+        
+        # Update courses
+        group.courses.clear()
+        if course_ids:
+            courses = Course.objects.filter(id__in=course_ids)
+            group.courses.add(*courses)
+        
+        messages.success(request, f'Course group "{name}" updated successfully')
+        return redirect('course_groups')
+    
+    courses = Course.objects.all().order_by('grade_level', 'name')
+    periods = Period.objects.all().order_by('slot')
+    
+    context = {
+        'group': group,
+        'courses': courses,
+        'periods': periods,
+        'selected_course_ids': list(group.courses.values_list('id', flat=True))
+    }
+    
+    return render(request, 'schedule/edit_course_group.html', context)
+
+
+def delete_course_group(request, group_id):
+    """Handle deletion of a course group"""
+    group = get_object_or_404(CourseGroup, id=group_id)
+    
+    if request.method == 'POST':
+        name = group.name
+        group.delete()
+        messages.success(request, f'Course group "{name}" deleted successfully')
+    
+    return redirect('course_groups') 

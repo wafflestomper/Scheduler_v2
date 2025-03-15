@@ -171,3 +171,23 @@ class CourseEnrollment(models.Model):
         
     def __str__(self):
         return f"{self.student.name} enrolled in {self.course.name}"
+
+class CourseGroup(models.Model):
+    """
+    Groups related courses together for scheduling purposes.
+    Used for courses that should be scheduled in the same period 
+    but in different time segments (trimesters, quarters, semesters).
+    """
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    courses = models.ManyToManyField(Course, related_name='course_groups')
+    preferred_period = models.ForeignKey(Period, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_courses_count(self):
+        return self.courses.count()

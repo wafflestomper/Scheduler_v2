@@ -54,7 +54,12 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if '/enroll-students/' in request.path %}active{% endif %}" href="{% url 'enroll_students' %}">
-                                <i class="bi bi-person-plus-fill"></i> Enrollments
+                                <i class="bi bi-person-plus"></i> Enrollments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/course-groups/' in request.path %}active{% endif %}" href="{% url 'course_groups' %}">
+                                <i class="bi bi-diagram-3"></i> Course Groups
                             </a>
                         </li>
                         <li class="nav-item">

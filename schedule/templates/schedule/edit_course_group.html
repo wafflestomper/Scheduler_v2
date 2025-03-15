@@ -1,0 +1,82 @@
+{% extends 'schedule/base.html' %}
+{% load static %}
+
+{% block title %}Edit Course Group - School Scheduler{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-2">Edit Course Group: {{ group.name }}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'course_groups' %}">Course Groups</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit {{ group.name }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="row mb-3">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Edit Group Details</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'edit_course_group' group.id %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Group Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ group.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ group.description }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="courses" class="form-label">Courses</label>
+                            <select class="form-select" id="courses" name="courses" multiple size="10">
+                                {% for course in courses %}
+                                <option value="{{ course.id }}" {% if course.id in selected_course_ids %}selected{% endif %}>
+                                    {{ course.name }} ({{ course.id }}) - Grade {{ course.grade_level }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple courses</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="preferred_period" class="form-label">Preferred Period (Optional)</label>
+                            <select class="form-select" id="preferred_period" name="preferred_period">
+                                <option value="">-- Select Period --</option>
+                                {% for period in periods %}
+                                <option value="{{ period.id }}" {% if group.preferred_period and group.preferred_period.id == period.id %}selected{% endif %}>
+                                    {{ period }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">If specified, the system will try to schedule all courses in this group during this period</div>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'course_groups' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
