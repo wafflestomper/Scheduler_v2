@@ -40,7 +40,7 @@ def edit_section(request, section_id):
     
     # For GET request or if there was an error
     courses = Course.objects.all().order_by('name')
-    teachers = Teacher.objects.all().order_by('last_name', 'first_name')
+    teachers = Teacher.objects.all().order_by('name')
     rooms = Room.objects.all().order_by('name')
     periods = Period.objects.all().order_by('start_time')
     
