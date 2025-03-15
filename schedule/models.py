@@ -144,6 +144,10 @@ class Section(models.Model):
     
     def current_enrollment(self):
         return self.students.count()
+    
+    def get_students_list(self):
+        """Get a list of student IDs enrolled in this section."""
+        return list(self.students.values_list('id', flat=True))
 
 class Enrollment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)

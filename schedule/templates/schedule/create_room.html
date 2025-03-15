@@ -1,0 +1,72 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Create New Room{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_rooms' %}">Manage Rooms</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Create Room</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Create New Room</h2>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="room_id" class="form-label">Room ID</label>
+                            <input type="text" class="form-control" id="room_id" name="room_id" placeholder="R001" required>
+                            <div class="form-text">Unique identifier for this room (e.g., R001, R002)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="number" class="form-label">Room Number</label>
+                            <input type="text" class="form-control" id="number" name="number" placeholder="101" required>
+                            <div class="form-text">Room number as displayed in the school</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="capacity" class="form-label">Capacity</label>
+                            <input type="number" class="form-control" id="capacity" name="capacity" placeholder="30" min="1" required>
+                            <div class="form-text">Maximum number of students the room can accommodate</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Room Type</label>
+                            <select class="form-select" id="type" name="type" required>
+                                {% for type_code, type_name in room_types %}
+                                <option value="{{ type_code }}">{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'view_rooms' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-success">Create Room</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

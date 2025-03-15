@@ -1,0 +1,58 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Delete Teacher{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_teachers' %}">Manage Teachers</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Teacher</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2>Delete Teacher: {{ teacher.name }}</h2>
+        </div>
+        <div class="card-body">
+            {% if sections_using_teacher > 0 or courses_using_teacher > 0 %}
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Cannot Delete Teacher</h4>
+                    {% if sections_using_teacher > 0 %}
+                    <p>This teacher is currently assigned to {{ sections_using_teacher }} section(s).</p>
+                    <p>You must reassign these sections to different teachers before deleting this teacher.</p>
+                    {% endif %}
+                    
+                    {% if courses_using_teacher > 0 %}
+                    <p>This teacher is listed as eligible for {{ courses_using_teacher }} course(s).</p>
+                    <p>You must remove this teacher from the eligible teachers list before deleting.</p>
+                    {% endif %}
+                </div>
+                <a href="{% url 'view_teachers' %}" class="btn btn-primary">Return to Teachers</a>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete the following teacher:</p>
+                    <ul>
+                        <li><strong>ID:</strong> {{ teacher.id }}</li>
+                        <li><strong>Name:</strong> {{ teacher.name }}</li>
+                        <li><strong>Subjects:</strong> {{ teacher.subjects|default:"(None)" }}</li>
+                        <li><strong>Availability:</strong> {{ teacher.availability|default:"(None)" }}</li>
+                    </ul>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'view_teachers' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Teacher</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

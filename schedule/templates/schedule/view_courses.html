@@ -1,0 +1,92 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Manage Courses{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Manage Courses</li>
+        </ol>
+    </nav>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2>Manage Courses</h2>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-3">
+                <div>
+                    <a href="{% url 'create_course' %}" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Create New Course
+                    </a>
+                </div>
+                <div>
+                    <a href="{% url 'csv_upload' %}" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload CSV
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Grade Level</th>
+                            <th>Max Students</th>
+                            <th>Duration</th>
+                            <th>Sections Needed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                            <tr>
+                                <td>{{ course.id }}</td>
+                                <td>{{ course.name }}</td>
+                                <td>{{ course.get_type_display }}</td>
+                                <td>{{ course.grade_level }}</td>
+                                <td>{{ course.max_students }}</td>
+                                <td>{{ course.get_duration_display }}</td>
+                                <td>{{ course.sections_needed }}</td>
+                                <td class="d-flex">
+                                    <a href="{% url 'edit_course' course_id=course.id %}" class="btn btn-sm btn-warning me-1">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{% url 'delete_course' course_id=course.id %}" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">No courses found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Add Bootstrap icons */
+    @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css");
+</style>
+{% endblock %} 

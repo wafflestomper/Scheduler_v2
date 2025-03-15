@@ -1,0 +1,72 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Edit Teacher{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_teachers' %}">Manage Teachers</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit Teacher</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Edit Teacher: {{ teacher.name }}</h2>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="teacher_id" class="form-label">Teacher ID</label>
+                            <input type="text" class="form-control" id="teacher_id" value="{{ teacher.id }}" disabled>
+                            <div class="form-text">Teacher ID cannot be changed</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ teacher.name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="subjects" class="form-label">Subjects</label>
+                            <input type="text" class="form-control" id="subjects" name="subjects" value="{{ teacher.subjects }}">
+                            <div class="form-text">Subjects taught, separated by | (e.g., Math|Science|History)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="availability" class="form-label">Availability</label>
+                            <input type="text" class="form-control" id="availability" name="availability" value="{{ teacher.availability }}">
+                            <div class="form-text">Format: 'M1-M6,T1-T3' for Monday periods 1-6, Tuesday periods 1-3</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info" role="alert">
+                    <p><strong>Note:</strong> Changing a teacher's information may affect scheduling. Make sure to check for conflicts after updating.</p>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{% url 'view_teachers' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

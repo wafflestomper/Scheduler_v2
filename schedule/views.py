@@ -650,13 +650,8 @@ def delete_student(request, student_id):
         student_name = student.name
         
         # Remove student from all sections
-        sections = Section.objects.all()
-        for section in sections:
-            students_list = section.get_students_list()
-            if student_id in students_list:
-                students_list.remove(student_id)
-                section.students = ','.join(students_list)
-                section.save()
+        # With ManyToMany through Enrollment, we don't need to manually remove the student
+        # The cascade delete will handle the enrollments when the student is deleted
         
         # Delete the student
         student.delete()
@@ -721,6 +716,10 @@ def admin_reports(request):
         }
     
     for section in sections:
+        # Skip sections without assigned teachers
+        if not section.teacher:
+            continue
+            
         teacher_id = section.teacher.id
         student_count = len(section.get_students_list())
         
@@ -1144,3 +1143,343 @@ def delete_period(request, period_id):
     }
     
     return render(request, 'schedule/delete_period_confirm.html', context)
+
+def view_teachers(request):
+    """View all teachers with editing and deletion options."""
+    teachers = Teacher.objects.all().order_by('name')
+    
+    context = {
+        'teachers': teachers,
+    }
+    
+    return render(request, 'schedule/view_teachers.html', context)
+
+def create_teacher(request):
+    """Create a new teacher."""
+    if request.method == 'POST':
+        # Process form data
+        teacher_id = request.POST.get('teacher_id')
+        name = request.POST.get('name')
+        availability = request.POST.get('availability')
+        subjects = request.POST.get('subjects')
+        
+        # Validate teacher_id
+        if not teacher_id:
+            messages.error(request, 'Teacher ID is required.')
+            return redirect('create_teacher')
+        
+        # Check if teacher ID already exists
+        if Teacher.objects.filter(id=teacher_id).exists():
+            messages.error(request, f'Teacher with ID "{teacher_id}" already exists.')
+            return redirect('create_teacher')
+        
+        try:
+            # Create new teacher
+            teacher = Teacher.objects.create(
+                id=teacher_id,
+                name=name,
+                availability=availability,
+                subjects=subjects
+            )
+            messages.success(request, f'Teacher {teacher.name} created successfully!')
+            return redirect('view_teachers')
+        except Exception as e:
+            messages.error(request, f'Error creating teacher: {str(e)}')
+            return redirect('create_teacher')
+    
+    return render(request, 'schedule/create_teacher.html')
+
+def edit_teacher(request, teacher_id):
+    """Edit an existing teacher."""
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    
+    if request.method == 'POST':
+        # Process form data
+        name = request.POST.get('name')
+        availability = request.POST.get('availability')
+        subjects = request.POST.get('subjects')
+        
+        # Update teacher
+        teacher.name = name
+        teacher.availability = availability
+        teacher.subjects = subjects
+        
+        # Save changes
+        teacher.save()
+        messages.success(request, f'Teacher {teacher.name} updated successfully!')
+        return redirect('view_teachers')
+    
+    context = {
+        'teacher': teacher,
+    }
+    
+    return render(request, 'schedule/edit_teacher.html', context)
+
+def delete_teacher(request, teacher_id):
+    """Delete a teacher."""
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    
+    # Check if any sections are using this teacher
+    sections_using_teacher = Section.objects.filter(teacher=teacher).count()
+    # Check if any courses reference this teacher
+    courses_using_teacher = Course.objects.filter(eligible_teachers__contains=teacher.id).count()
+    
+    if request.method == 'POST':
+        if sections_using_teacher > 0:
+            messages.error(request, f'Cannot delete teacher {teacher.name} because they are assigned to {sections_using_teacher} section(s).')
+        elif courses_using_teacher > 0:
+            messages.error(request, f'Cannot delete teacher {teacher.name} because they are listed as eligible for {courses_using_teacher} course(s).')
+        else:
+            teacher_name = teacher.name
+            teacher.delete()
+            messages.success(request, f'Teacher {teacher_name} deleted successfully!')
+        return redirect('view_teachers')
+    
+    context = {
+        'teacher': teacher,
+        'sections_using_teacher': sections_using_teacher,
+        'courses_using_teacher': courses_using_teacher,
+    }
+    
+    return render(request, 'schedule/delete_teacher_confirm.html', context)
+
+def view_rooms(request):
+    """View all rooms with editing and deletion options."""
+    rooms = Room.objects.all().order_by('number')
+    
+    context = {
+        'rooms': rooms,
+    }
+    
+    return render(request, 'schedule/view_rooms.html', context)
+
+def create_room(request):
+    """Create a new room."""
+    if request.method == 'POST':
+        # Process form data
+        room_id = request.POST.get('room_id')
+        number = request.POST.get('number')
+        capacity = request.POST.get('capacity')
+        type = request.POST.get('type')
+        
+        # Validate room_id
+        if not room_id:
+            messages.error(request, 'Room ID is required.')
+            return redirect('create_room')
+        
+        # Check if room ID already exists
+        if Room.objects.filter(id=room_id).exists():
+            messages.error(request, f'Room with ID "{room_id}" already exists.')
+            return redirect('create_room')
+        
+        try:
+            # Create new room
+            room = Room.objects.create(
+                id=room_id,
+                number=number,
+                capacity=int(capacity),
+                type=type
+            )
+            messages.success(request, f'Room {room.number} created successfully!')
+            return redirect('view_rooms')
+        except Exception as e:
+            messages.error(request, f'Error creating room: {str(e)}')
+            return redirect('create_room')
+    
+    context = {
+        'room_types': Room.ROOM_TYPES,
+    }
+    
+    return render(request, 'schedule/create_room.html', context)
+
+def edit_room(request, room_id):
+    """Edit an existing room."""
+    room = get_object_or_404(Room, id=room_id)
+    
+    if request.method == 'POST':
+        # Process form data
+        number = request.POST.get('number')
+        capacity = request.POST.get('capacity')
+        type = request.POST.get('type')
+        
+        # Update room
+        room.number = number
+        room.capacity = int(capacity)
+        room.type = type
+        
+        # Save changes
+        room.save()
+        messages.success(request, f'Room {room.number} updated successfully!')
+        return redirect('view_rooms')
+    
+    context = {
+        'room': room,
+        'room_types': Room.ROOM_TYPES,
+    }
+    
+    return render(request, 'schedule/edit_room.html', context)
+
+def delete_room(request, room_id):
+    """Delete a room."""
+    room = get_object_or_404(Room, id=room_id)
+    
+    # Check if any sections are using this room
+    sections_using_room = Section.objects.filter(room=room).count()
+    
+    if request.method == 'POST':
+        if sections_using_room > 0:
+            messages.error(request, f'Cannot delete room {room.number} because it is being used by {sections_using_room} section(s).')
+        else:
+            room_number = room.number
+            room.delete()
+            messages.success(request, f'Room {room_number} deleted successfully!')
+        return redirect('view_rooms')
+    
+    context = {
+        'room': room,
+        'sections_using_room': sections_using_room,
+    }
+    
+    return render(request, 'schedule/delete_room_confirm.html', context)
+
+def view_courses(request):
+    """View all courses with editing and deletion options."""
+    courses = Course.objects.all().order_by('grade_level', 'name')
+    
+    context = {
+        'courses': courses,
+    }
+    
+    return render(request, 'schedule/view_courses.html', context)
+
+def create_course(request):
+    """Create a new course."""
+    if request.method == 'POST':
+        # Process form data
+        course_id = request.POST.get('course_id')
+        name = request.POST.get('name')
+        course_type = request.POST.get('type')
+        grade_level = request.POST.get('grade_level')
+        max_students = request.POST.get('max_students')
+        eligible_teachers = request.POST.get('eligible_teachers')
+        duration = request.POST.get('duration')
+        sections_needed = request.POST.get('sections_needed', 1)
+        
+        # Validate course_id
+        if not course_id:
+            messages.error(request, 'Course ID is required.')
+            return redirect('create_course')
+        
+        # Check if course ID already exists
+        if Course.objects.filter(id=course_id).exists():
+            messages.error(request, f'Course with ID "{course_id}" already exists.')
+            return redirect('create_course')
+        
+        try:
+            grade_level = int(grade_level)
+            max_students = int(max_students)
+            sections_needed = int(sections_needed)
+        except ValueError:
+            messages.error(request, 'Grade level, max students, and sections needed must be valid numbers.')
+            return redirect('create_course')
+        
+        try:
+            # Create new course
+            course = Course.objects.create(
+                id=course_id,
+                name=name,
+                type=course_type,
+                grade_level=grade_level,
+                max_students=max_students,
+                eligible_teachers=eligible_teachers or '',
+                duration=duration,
+                sections_needed=sections_needed
+            )
+            messages.success(request, f'Course {course.name} created successfully!')
+            return redirect('view_courses')
+        except Exception as e:
+            messages.error(request, f'Error creating course: {str(e)}')
+            return redirect('create_course')
+    
+    context = {
+        'course_types': Course.COURSE_TYPES,
+        'duration_types': Course.DURATION_TYPES,
+        'teachers': Teacher.objects.all().order_by('name'),
+    }
+    
+    return render(request, 'schedule/create_course.html', context)
+
+def edit_course(request, course_id):
+    """Edit an existing course."""
+    course = get_object_or_404(Course, id=course_id)
+    
+    if request.method == 'POST':
+        # Process form data
+        name = request.POST.get('name')
+        course_type = request.POST.get('type')
+        grade_level = request.POST.get('grade_level')
+        max_students = request.POST.get('max_students')
+        eligible_teachers = request.POST.get('eligible_teachers')
+        duration = request.POST.get('duration')
+        sections_needed = request.POST.get('sections_needed', 1)
+        
+        try:
+            grade_level = int(grade_level)
+            max_students = int(max_students)
+            sections_needed = int(sections_needed)
+        except ValueError:
+            messages.error(request, 'Grade level, max students, and sections needed must be valid numbers.')
+            context = {
+                'course': course,
+                'course_types': Course.COURSE_TYPES,
+                'duration_types': Course.DURATION_TYPES,
+                'teachers': Teacher.objects.all().order_by('name'),
+            }
+            return render(request, 'schedule/edit_course.html', context)
+        
+        # Update course
+        course.name = name
+        course.type = course_type
+        course.grade_level = grade_level
+        course.max_students = max_students
+        course.eligible_teachers = eligible_teachers or ''
+        course.duration = duration
+        course.sections_needed = sections_needed
+        
+        # Save changes
+        course.save()
+        messages.success(request, f'Course {course.name} updated successfully!')
+        return redirect('view_courses')
+    
+    context = {
+        'course': course,
+        'course_types': Course.COURSE_TYPES,
+        'duration_types': Course.DURATION_TYPES,
+        'teachers': Teacher.objects.all().order_by('name'),
+        'eligible_teachers_list': course.get_eligible_teachers_list(),
+    }
+    
+    return render(request, 'schedule/edit_course.html', context)
+
+def delete_course(request, course_id):
+    """Delete a course."""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if any sections are using this course
+    sections_using_course = Section.objects.filter(course=course).count()
+    
+    if request.method == 'POST':
+        if sections_using_course > 0:
+            messages.error(request, f'Cannot delete course {course.name} because it has {sections_using_course} section(s).')
+        else:
+            course_name = course.name
+            course.delete()
+            messages.success(request, f'Course {course_name} deleted successfully!')
+        return redirect('view_courses')
+    
+    context = {
+        'course': course,
+        'sections_using_course': sections_using_course,
+    }
+    
+    return render(request, 'schedule/delete_course_confirm.html', context)

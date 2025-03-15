@@ -14,5 +14,9 @@ alwaysApply: true
 
 #Additional info
 - After pushing to github, summarize the work that has been done and append it to file "progress_log.md" in the Scheduler_v2 directory.  Append below older material but above ## Next Steps. Include time stamp to appends.  Also provide a separate summary as well as next steps for me to seed a new chat with what we have compeleted and what our next steps are so that the new chat can be informed.
--When I start a new chat, recommend starting a new branch and what feature we will be workign on
+-When I start a new chat, recommend starting a new branch and what feature we will be workign on.
+
+IMPORTANT: Avoid having files over 300 lines of code. Refactor at that point.  Do low risk refactoring.
+
+
 

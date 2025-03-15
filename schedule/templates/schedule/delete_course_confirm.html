@@ -1,0 +1,53 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Delete Course{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_courses' %}">Manage Courses</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Course</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2>Delete Course: {{ course.name }}</h2>
+        </div>
+        <div class="card-body">
+            {% if sections_using_course > 0 %}
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Cannot Delete Course</h4>
+                    <p>This course is currently being used by {{ sections_using_course }} section(s).</p>
+                    <p>You must delete these sections first before deleting this course.</p>
+                </div>
+                <a href="{% url 'view_courses' %}" class="btn btn-primary">Return to Courses</a>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete the following course:</p>
+                    <ul>
+                        <li><strong>ID:</strong> {{ course.id }}</li>
+                        <li><strong>Name:</strong> {{ course.name }}</li>
+                        <li><strong>Type:</strong> {{ course.get_type_display }}</li>
+                        <li><strong>Grade Level:</strong> {{ course.grade_level }}</li>
+                        <li><strong>Max Students:</strong> {{ course.max_students }}</li>
+                        <li><strong>Duration:</strong> {{ course.get_duration_display }}</li>
+                    </ul>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'view_courses' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Course</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,9 @@
+period_id,period_name,days,slot,start_time,end_time
+1,1st period,M|T|W|TH|F,1,8:00,8:45
+2,2nd period,M|T|W|TH|F,2,8:50,9:30
+3,3rd period,M|T|W|TH|F,3,10:20,11:00
+4,4th period,M|T|W|TH|F,4,11:05,11:45
+L,Lunch,M|T|W|TH|F,L,12:20,13:00
+5,5th period,M|T|W|TH|F,5,13:05,13:45
+6,6th period,M|T|W|TH|F,6,13:50,14:35
+7,7th period,M|T|W|TH|F,7,14:40,15:45

@@ -1,0 +1,51 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Delete Room{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'view_rooms' %}">Manage Rooms</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete Room</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h2>Delete Room: {{ room.number }}</h2>
+        </div>
+        <div class="card-body">
+            {% if sections_using_room > 0 %}
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Cannot Delete Room</h4>
+                    <p>This room is currently being used by {{ sections_using_room }} section(s).</p>
+                    <p>You must reassign these sections to different rooms before deleting this room.</p>
+                </div>
+                <a href="{% url 'view_rooms' %}" class="btn btn-primary">Return to Rooms</a>
+            {% else %}
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete the following room:</p>
+                    <ul>
+                        <li><strong>ID:</strong> {{ room.id }}</li>
+                        <li><strong>Number:</strong> {{ room.number }}</li>
+                        <li><strong>Type:</strong> {{ room.get_type_display }}</li>
+                        <li><strong>Capacity:</strong> {{ room.capacity }}</li>
+                    </ul>
+                    <p>This action cannot be undone. Are you sure you want to proceed?</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'view_rooms' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Room</button>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
