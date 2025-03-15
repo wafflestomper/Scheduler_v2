@@ -3,8 +3,9 @@ from django.contrib import messages
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 import csv
-from ..models import Section, Course, Teacher, Room, Period, Student
+from ..models import Section, Course, Teacher, Room, Period, Student, Enrollment
 from django.db import transaction
+from django.db.models import Count, Q
 
 
 def edit_section(request, section_id):
@@ -320,4 +321,42 @@ def find_schedule_conflicts():
             else:
                 periods_with_sections[period_id] = section
     
-    return conflicts 
+    return conflicts
+
+
+def section_roster(request, course_id):
+    """View to display the roster of students enrolled in each section of a course"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Get all sections for this course
+    sections = Section.objects.filter(course=course).select_related('teacher', 'period', 'room')
+    
+    # Initialize data structure to hold section rosters
+    section_rosters = []
+    
+    for section in sections:
+        # Get students enrolled in this section
+        enrollments = Enrollment.objects.filter(section=section).select_related('student')
+        students = [enrollment.student for enrollment in enrollments]
+        
+        # Sort students by name for consistent display
+        students.sort(key=lambda x: x.name)
+        
+        section_rosters.append({
+            'section': section,
+            'students': students,
+            'enrollment_count': len(students),
+            'max_size': section.max_size or 'Unlimited'
+        })
+    
+    # Sort sections by section number
+    section_rosters.sort(key=lambda x: x['section'].section_number)
+    
+    context = {
+        'course': course,
+        'section_rosters': section_rosters,
+        'total_sections': len(section_rosters),
+        'total_students': sum(len(roster['students']) for roster in section_rosters)
+    }
+    
+    return render(request, 'schedule/section_roster.html', context) 

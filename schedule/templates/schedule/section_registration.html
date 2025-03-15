@@ -83,7 +83,11 @@
                             <tbody>
                                 {% for stat in course_enrollment_stats %}
                                 <tr>
-                                    <td>{{ stat.course__name }}</td>
+                                    <td>
+                                        <a href="{% url 'section_roster' course_id=stat.course__id %}" class="text-decoration-none">
+                                            {{ stat.course__name }}
+                                        </a>
+                                    </td>
                                     <td class="text-center">{{ stat.total_enrolled }}</td>
                                     <td class="text-center">{{ stat.assigned_to_sections }}</td>
                                     <td class="text-center">

@@ -2,14 +2,14 @@ from django.urls import path
 from .views.main_views import index
 from .views.student_views import (
     view_students, student_detail, edit_student, delete_student,
-    export_student_schedules, student_list, add_student, bulk_upload_students, download_student_template
+    export_student_schedules
 )
 from .views.course_views import (
     view_courses, create_course, edit_course, delete_course,
     course_list, course_groups, create_course_group, edit_course_group, delete_course_group
 )
 from .views.teacher_views import (
-    view_teachers, create_teacher, edit_teacher, delete_teacher, teacher_list, add_teacher
+    view_teachers, create_teacher, edit_teacher, delete_teacher
 )
 from .views.room_views import (
     view_rooms, create_room, edit_room, delete_room
@@ -19,7 +19,7 @@ from .views.period_views import (
 )
 from .views.section_views import (
     edit_section, get_conflicts, export_master_schedule,
-    master_schedule, student_schedules
+    master_schedule, student_schedules, view_sections, add_section, delete_section, check_conflicts, section_roster
 )
 from .views.schedule_generation_views import (
     schedule_generation, admin_reports
@@ -85,4 +85,12 @@ urlpatterns = [
     path('course-groups/create/', create_course_group, name='create_course_group'),
     path('course-groups/<int:group_id>/edit/', edit_course_group, name='edit_course_group'),
     path('course-groups/<int:group_id>/delete/', delete_course_group, name='delete_course_group'),
+    
+    # Section routes
+    path('sections/', view_sections, name='view_sections'),
+    path('sections/add/', add_section, name='add_section'),
+    path('sections/<str:section_id>/', edit_section, name='edit_section'),
+    path('sections/<str:section_id>/delete/', delete_section, name='delete_section'),
+    path('sections/<str:section_id>/conflicts/', check_conflicts, name='check_conflicts'),
+    path('course/<str:course_id>/roster/', section_roster, name='section_roster'),
 ] 
