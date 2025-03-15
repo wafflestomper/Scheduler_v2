@@ -14,173 +14,27 @@
 
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Registration Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <button id="run-registration-btn" class="btn btn-primary mb-3">
-                            <i class="bi bi-distribute-vertical"></i> Assign All Students to Sections
-                        </button>
-                        
-                        <button id="deregister-all-btn" class="btn btn-danger mb-3">
-                            <i class="bi bi-x-circle"></i> Deregister All Section Assignments
-                        </button>
-                        
-                        <form id="course-registration-form">
-                            <div class="mb-3">
-                                <label for="course-select" class="form-label">Or select a specific course:</label>
-                                <select class="form-select" id="course-select">
-                                    <option value="">-- Select Course --</option>
-                                    {% for stat in course_enrollment_stats %}
-                                    {% if stat.needing_assignment > 0 %}
-                                    <option value="{{ stat.course__id }}">{{ stat.course__name }} ({{ stat.needing_assignment }})</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="d-grid">
-                                <button type="button" id="run-course-registration-btn" class="btn btn-outline-primary">
-                                    <i class="bi bi-distribute-vertical"></i> Assign Selected Course
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Registration Stats</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="card-subtitle mb-2 text-muted">Students Needing Assignment</h6>
-                        <p class="display-4 mb-0">{{ unassigned_students_count }}</p>
-                    </div>
-                </div>
-            </div>
+            {% include 'schedule/partials/registration_actions.html' %}
         </div>
-        
+
         <div class="col-md-9">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Course Enrollment Status</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Course</th>
-                                    <th class="text-center">Total Enrolled</th>
-                                    <th class="text-center">Assigned to Sections</th>
-                                    <th class="text-center">Needing Assignment</th>
-                                    <th class="text-end">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stat in course_enrollment_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'section_roster' course_id=stat.course__id %}" class="text-decoration-none">
-                                            {{ stat.course__name }}
-                                        </a>
-                                    </td>
-                                    <td class="text-center">{{ stat.total_enrolled }}</td>
-                                    <td class="text-center">{{ stat.assigned_to_sections }}</td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill bg-{% if stat.needing_assignment > 0 %}warning{% else %}success{% endif %}">
-                                            {{ stat.needing_assignment }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        {% if stat.needing_assignment > 0 %}
-                                        <button class="btn btn-sm btn-outline-primary course-register-btn" data-course-id="{{ stat.course__id }}">
-                                            <i class="bi bi-box-arrow-in-right"></i> Assign
-                                        </button>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center py-4">
-                                        <div class="alert alert-info mb-0">No course enrollments found.</div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Section Capacity Status</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Section</th>
-                                    <th>Course</th>
-                                    <th>Period</th>
-                                    <th>Teacher</th>
-                                    <th>Room</th>
-                                    <th class="text-center">Enrolled</th>
-                                    <th class="text-center">Capacity</th>
-                                    <th class="text-center">Available</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for stat in section_stats %}
-                                <tr>
-                                    <td>{{ stat.section.section_number }}</td>
-                                    <td>
-                                        <a href="{% url 'section_roster' course_id=stat.section.course.id %}?section={{ stat.section.section_number }}" class="text-decoration-none">
-                                            {{ stat.section.course.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ stat.section.period.name|default:"Unassigned" }}</td>
-                                    <td>{{ stat.section.teacher.name|default:"Unassigned" }}</td>
-                                    <td>{{ stat.section.room.name|default:"Unassigned" }}</td>
-                                    <td class="text-center">{{ stat.enrolled_count }}</td>
-                                    <td class="text-center">{{ stat.capacity|default:"Unlimited" }}</td>
-                                    <td class="text-center">
-                                        {% if stat.capacity %}
-                                            <span class="badge rounded-pill bg-{% if stat.remaining_capacity > 0 %}success{% elif stat.remaining_capacity == 0 %}warning{% else %}danger{% endif %}">
-                                                {{ stat.remaining_capacity }}
-                                            </span>
-                                        {% else %}
-                                            <span class="badge rounded-pill bg-secondary">Unlimited</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">
-                                        <div class="alert alert-info mb-0">No sections found.</div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            {% include 'schedule/partials/course_enrollment_stats.html' %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% include 'schedule/partials/section_registration_table.html' %}
         </div>
     </div>
 </div>
 
-<!-- Result Modal -->
+<!-- Results Modal -->
 <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="resultModalLabel">Section Assignment Results</h5>
+                <h5 class="modal-title" id="resultModalLabel">Registration Results</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="resultModalBody">
@@ -195,7 +49,6 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 <style>
     .badge {
         font-size: 0.9rem;

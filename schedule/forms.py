@@ -1,5 +1,6 @@
 from django import forms
 from .models import Student
+from schedule.models import Course, Period
 
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(
@@ -34,4 +35,44 @@ class StudentForm(forms.ModelForm):
         }
         help_texts = {
             'preferences': 'Enter course preferences separated by | character',
-        } 
+        }
+
+class LanguageCourseForm(forms.Form):
+    """Form for language course assignment"""
+    student = forms.CharField(
+        widget=forms.Select,
+        label="Student"
+    )
+    courses = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        label="Courses"
+    )
+    preferred_period = forms.CharField(
+        widget=forms.Select,
+        label="Preferred Period",
+        required=False
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Get students who are enrolled in language courses
+        self.fields['student'].widget.choices = [
+            (s.id, s.name) for s in Student.objects.filter(
+                course_enrollments__course__type='language'
+            ).distinct().order_by('name')
+        ]
+        
+        # Get language courses
+        self.fields['courses'].choices = [
+            (c.id, f"{c.name} - {c.id}") for c in Course.objects.filter(
+                type='language'
+            ).order_by('grade_level', 'name')
+        ]
+        
+        # Get periods
+        self.fields['preferred_period'].widget.choices = [
+            ('', '-- No preference --')
+        ] + [
+            (p.id, str(p)) for p in Period.objects.all().order_by('slot')
+        ] 
