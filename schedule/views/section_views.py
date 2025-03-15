@@ -90,14 +90,14 @@ def export_master_schedule(request):
         period_sections = sections.filter(period=period)
         
         if not period_sections:
-            writer.writerow([period.name, '', '', '', ''])
+            writer.writerow([period.period_name, '', '', '', ''])
         else:
             for section in period_sections:
                 # Count students in this section
                 student_count = section.student_set.count()
                 
                 writer.writerow([
-                    period.name,
+                    period.period_name,
                     section.course.name if section.course else '',
                     section.teacher.full_name if section.teacher else '',
                     section.room.number if section.room else '',
@@ -135,7 +135,7 @@ def master_schedule(request):
     
     for period in periods:
         schedule[period.id] = {
-            'period_name': period.name,
+            'period_name': period.period_name,
             'sections': []
         }
         
@@ -248,18 +248,18 @@ def find_schedule_conflicts():
                 # Conflict: Teacher assigned to multiple sections in the same period
                 conflict = {
                     'type': 'teacher',
-                    'description': f"Teacher {teacher.full_name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Teacher {teacher.full_name} assigned to multiple sections in period {section.period.period_name}",
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
+                            'period': periods_with_sections[period_id].period.period_name,
                             'room': periods_with_sections[period_id].room.number if periods_with_sections[period_id].room else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
+                            'period': section.period.period_name,
                             'room': section.room.number if section.room else "Unassigned"
                         }
                     ]
@@ -280,18 +280,18 @@ def find_schedule_conflicts():
                 # Conflict: Room assigned to multiple sections in the same period
                 conflict = {
                     'type': 'room',
-                    'description': f"Room {room.number} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Room {room.number} assigned to multiple sections in period {section.period.period_name}",
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
+                            'period': periods_with_sections[period_id].period.period_name,
                             'teacher': periods_with_sections[period_id].teacher.full_name if periods_with_sections[period_id].teacher else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
+                            'period': section.period.period_name,
                             'teacher': section.teacher.teacher.full_name if section.teacher else "Unassigned"
                         }
                     ]
@@ -312,19 +312,19 @@ def find_schedule_conflicts():
                 # Conflict: Student assigned to multiple sections in the same period
                 conflict = {
                     'type': 'student',
-                    'description': f"Student {student.full_name} assigned to multiple sections in period {section.period.name}",
+                    'description': f"Student {student.full_name} assigned to multiple sections in period {section.period.period_name}",
                     'student_id': student.id,
                     'sections': [
                         {
                             'id': periods_with_sections[period_id].id,
                             'course': periods_with_sections[period_id].course.name if periods_with_sections[period_id].course else "Unassigned",
-                            'period': periods_with_sections[period_id].period.name,
+                            'period': periods_with_sections[period_id].period.period_name,
                             'teacher': periods_with_sections[period_id].teacher.full_name if periods_with_sections[period_id].teacher else "Unassigned"
                         },
                         {
                             'id': section.id,
                             'course': section.course.name if section.course else "Unassigned",
-                            'period': section.period.name,
+                            'period': section.period.period_name,
                             'teacher': section.teacher.full_name if section.teacher else "Unassigned"
                         }
                     ]
