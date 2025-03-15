@@ -46,7 +46,7 @@ def edit_section(request, section_id):
                 section.save()
                 
                 messages.success(request, f"Section updated successfully!")
-                return redirect('master_schedule')
+                return redirect('view_sections')
         except Exception as e:
             messages.error(request, f"Error updating section: {str(e)}")
     
