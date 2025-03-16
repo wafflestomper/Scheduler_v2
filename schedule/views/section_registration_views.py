@@ -7,7 +7,7 @@ from schedule.models import Student, Section, Course, CourseEnrollment, Enrollme
 from schedule.forms import LanguageCourseForm, TrimesterCourseForm
 from schedule.utils.section_registration_utils import (
     get_section_stats, get_course_enrollment_stats,
-    get_unassigned_students_count, deregister_sections
+    get_unassigned_students_count, deregister_sections, clear_student_enrollments
 )
 from schedule.utils.balance_assignment import perfect_balance_assignment
 from schedule.utils.language_course_utils import assign_language_courses, get_language_course_conflicts
@@ -90,6 +90,22 @@ def section_registration(request):
                     'message': f'Successfully deregistered {enrollment_count} section assignments',
                     'deregistered_count': enrollment_count
                 })
+                
+            elif action == 'clear_student_enrollments':
+                student_id = data.get('student_id')
+                
+                if not student_id:
+                    return JsonResponse({'status': 'error', 'message': 'Student ID is required'})
+                
+                # Clear the student's enrollments
+                enrollment_count = clear_student_enrollments(student_id)
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Successfully cleared {enrollment_count} section enrollments for student',
+                    'cleared_count': enrollment_count
+                })
+                
             else:
                 return JsonResponse({'status': 'error', 'message': 'Invalid action'})
                 

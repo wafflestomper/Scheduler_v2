@@ -2,6 +2,10 @@
 
 {% block title %}{{ student.name }}'s Schedule{% endblock %}
 
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row mb-4">
@@ -82,9 +86,15 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'assign_language_courses' %}" class="btn btn-success">
+                        <a href="{% url 'assign_language_courses' %}" class="btn btn-success mb-2">
                             <i class="bi bi-translate"></i> Assign Language Courses
                         </a>
+                        
+                        {% if enrollments %}
+                        <button id="clear-enrollments-btn" class="btn btn-danger" data-student-id="{{ student.id }}">
+                            <i class="bi bi-trash"></i> Clear All Enrollments
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -95,4 +105,54 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clearEnrollmentsBtn = document.getElementById('clear-enrollments-btn');
+    
+    if (clearEnrollmentsBtn) {
+        clearEnrollmentsBtn.addEventListener('click', function() {
+            const studentId = this.dataset.studentId;
+            
+            if (!confirm('WARNING: This will remove ALL section enrollments for this student. This action cannot be undone. Are you sure you want to proceed?')) {
+                return;
+            }
+            
+            // Call the API to clear enrollments
+            fetch('{% url "section_registration" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    action: 'clear_student_enrollments',
+                    student_id: studentId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    // Reload the page to show the updated state
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        });
+    }
+    
+    // Helper function to get CSRF token
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+});
+</script>
 {% endblock %} 
