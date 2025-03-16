@@ -29,7 +29,7 @@ from .views.import_export_views import (
 )
 from .views.enrollment_views import (
     enroll_students, enroll_student_to_course, batch_enroll_students, 
-    batch_disenroll_students, assign_students_to_sections
+    batch_disenroll_students, assign_students_to_sections, clear_student_enrollments_api
 )
 from .views.section_registration_views import (
     section_registration, registration_home, view_student_schedule,
@@ -74,6 +74,7 @@ urlpatterns = [
     path('api/enroll-student-to-course/', enroll_student_to_course, name='enroll_student_to_course'),
     path('api/batch-enroll-students/', batch_enroll_students, name='batch_enroll_students'),
     path('api/batch-disenroll-students/', batch_disenroll_students, name='batch_disenroll_students'),
+    path('api/clear-student-enrollments/', clear_student_enrollments_api, name='clear_student_enrollments'),
     path('api/assign-students-to-sections/', assign_students_to_sections, name='assign_students_to_sections'),
     
     # Section registration

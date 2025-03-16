@@ -3,6 +3,10 @@
 
 {% block title %}Course Enrollment - School Scheduler{% endblock %}
 
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -74,6 +78,9 @@
                         </button>
                         <button id="batch-disenroll-btn" class="btn btn-sm btn-danger">
                             <i class="bi bi-people-x-fill"></i> Disenroll All Students
+                        </button>
+                        <button id="clear-enrollments-btn" class="btn btn-sm btn-warning">
+                            <i class="bi bi-trash"></i> Clear All Section Enrollments
                         </button>
                     </div>
                     {% endif %}
@@ -837,6 +844,65 @@ document.addEventListener('DOMContentLoaded', function() {
         
         responseModalBody.innerHTML = html;
         responseModal.show();
+    }
+
+    // Clear all enrollments for selected students
+    $('#clear-enrollments-btn').click(function() {
+        // Get all selected students
+        const selectedStudents = [];
+        $('.student-checkbox:checked').each(function() {
+            selectedStudents.push($(this).val());
+        });
+        
+        if (selectedStudents.length === 0) {
+            showResponse('error', 'Please select at least one student to clear enrollments');
+            return;
+        }
+        
+        if(confirm(`Are you sure you want to clear ALL SECTION ENROLLMENTS for ${selectedStudents.length} selected student(s)? This will remove them from all sections they are currently enrolled in.`)) {
+            // Perform the clear operation
+            clearStudentEnrollments(selectedStudents);
+        }
+    });
+    
+    // Function to clear enrollments for selected students
+    function clearStudentEnrollments(studentIds) {
+        const url = '/api/clear-student-enrollments/';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                student_ids: studentIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showResponse('success', `
+                    <h4>Enrollment Clearing Results</h4>
+                    <p>${data.message}</p>
+                    ${data.error_count > 0 ? `<p class="text-danger">Errors: ${data.error_count}</p>` : ''}
+                    ${data.errors.length > 0 ? `<ul class="text-danger"><li>${data.errors.join('</li><li>')}</li></ul>` : ''}
+                `);
+                
+                // Set flag to clear checkboxes on reload
+                sessionStorage.setItem('clear_checkboxes', 'true');
+                
+                // Reload the page after 2 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showResponse('error', data.message);
+            }
+        })
+        .catch(error => {
+            showResponse('error', 'An error occurred: ' + error);
+        });
     }
 });
 </script>

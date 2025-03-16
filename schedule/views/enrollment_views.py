@@ -5,6 +5,7 @@ from ..models import Student, Course, CourseEnrollment, Section, Enrollment
 import json
 from django.db.models import Q, Count
 from django.db import transaction
+from ..utils.section_registration_utils import clear_student_enrollments
 
 
 def enroll_students(request):
@@ -270,6 +271,50 @@ def batch_disenroll_students(request):
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'})
     except Course.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Course not found'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def clear_student_enrollments_api(request):
+    """API endpoint for clearing all section enrollments for one or more students"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method is allowed'})
+    
+    try:
+        data = json.loads(request.body)
+        student_ids = data.get('student_ids', [])
+        
+        if not student_ids:
+            return JsonResponse({'status': 'error', 'message': 'Missing required student_ids parameter'})
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for student_id in student_ids:
+            try:
+                student = Student.objects.get(id=student_id)
+                # Clear all enrollments for this student
+                removed_count = clear_student_enrollments(student_id)
+                success_count += 1
+                
+            except Student.DoesNotExist:
+                error_count += 1
+                errors.append(f"Student ID {student_id} not found")
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Error processing student ID {student_id}: {str(e)}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully cleared enrollments for {success_count} students',
+            'success_count': success_count,
+            'error_count': error_count,
+            'errors': errors
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
 
