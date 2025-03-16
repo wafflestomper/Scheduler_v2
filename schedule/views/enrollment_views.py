@@ -51,6 +51,10 @@ def enroll_students(request):
                 student=student,
                 course__in=selected_courses
             ).exists()
+        elif grade_filter:
+            # If "All Courses" is selected with a grade filter, 
+            # mark students as "enrolled" if they have any course enrollments
+            enrolled_in_selected_course = enrolled_course_count > 0
         
         student_data.append({
             'student': student,
@@ -218,15 +222,20 @@ def batch_disenroll_students(request):
         data = json.loads(request.body)
         student_ids = data.get('student_ids', [])
         course_id = data.get('course_id')
+        grade_filter = data.get('grade_filter')
+        all_courses = data.get('all_courses', False)
         
-        if not course_id:
-            return JsonResponse({'status': 'error', 'message': 'Missing required course_id parameter'})
-        
-        course = Course.objects.get(id=course_id)
+        if not course_id and not (all_courses and grade_filter):
+            return JsonResponse({'status': 'error', 'message': 'Missing required course_id parameter or grade_filter with all_courses=true'})
         
         success_count = 0
         error_count = 0
         errors = []
+        
+        # Get the course
+        course = None
+        if course_id:
+            course = Course.objects.get(id=course_id)
         
         for student_id in student_ids:
             try:
@@ -234,34 +243,58 @@ def batch_disenroll_students(request):
                 
                 # Try to find and delete the enrollment
                 try:
-                    enrollment = CourseEnrollment.objects.get(
-                        student=student,
-                        course=course
-                    )
-                    enrollment.delete()
-                    
-                    # Also remove any section assignments for this course
-                    enrollments = Enrollment.objects.filter(
-                        student=student,
-                        section__course=course
-                    )
-                    enrollments.delete()
+                    if course:
+                        # For specific course
+                        enrollment = CourseEnrollment.objects.get(
+                            student=student,
+                            course=course
+                        )
+                        enrollment.delete()
+                        
+                        # Also remove any section assignments for this course
+                        enrollments = Enrollment.objects.filter(
+                            student=student,
+                            section__course=course
+                        )
+                        enrollments.delete()
+                    elif all_courses and grade_filter:
+                        # For all courses in the grade level
+                        enrollments = CourseEnrollment.objects.filter(
+                            student=student,
+                            course__grade_level=grade_filter
+                        )
+                        enrollments.delete()
+                        
+                        # Also remove all section assignments for this grade level
+                        section_enrollments = Enrollment.objects.filter(
+                            student=student,
+                            section__course__grade_level=grade_filter
+                        )
+                        section_enrollments.delete()
                     
                     success_count += 1
                 except CourseEnrollment.DoesNotExist:
                     error_count += 1
-                    errors.append(f'{student.name} is not enrolled in {course.name}')
+                    if course:
+                        errors.append(f"Student {student.name} is not enrolled in {course.name}")
+                    else:
+                        errors.append(f"Student {student.name} has no enrollments for the selected grade level")
                     
             except Student.DoesNotExist:
                 error_count += 1
-                errors.append(f'Student ID {student_id} not found')
+                errors.append(f"Student ID {student_id} not found")
             except Exception as e:
                 error_count += 1
-                errors.append(f'Error disenrolling student ID {student_id}: {str(e)}')
+                errors.append(f"Error processing student ID {student_id}: {str(e)}")
         
+        if course:
+            success_message = f'Successfully disenrolled {success_count} students from {course.name}'
+        else:
+            success_message = f'Successfully disenrolled {success_count} students from all courses in grade {grade_filter}'
+            
         return JsonResponse({
             'status': 'success',
-            'message': f'Successfully disenrolled {success_count} students from {course.name}',
+            'message': success_message,
             'success_count': success_count,
             'error_count': error_count,
             'errors': errors

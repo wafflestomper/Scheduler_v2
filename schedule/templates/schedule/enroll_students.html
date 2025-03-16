@@ -116,7 +116,7 @@
                             <thead>
                                 <tr>
                                     <th>
-                                        {% if selected_course_ids %}
+                                        {% if selected_course_ids or grade_filter %}
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="select-all">
                                             <label class="form-check-label" for="select-all">ID</label>
@@ -136,7 +136,7 @@
                                 {% for data in student_data %}
                                 <tr {% if data.enrolled_in_selected_course %}class="table-success"{% endif %}>
                                     <td>
-                                        {% if selected_course_ids %}
+                                        {% if selected_course_ids or grade_filter %}
                                         <div class="form-check">
                                             <input class="form-check-input student-checkbox" type="checkbox" 
                                                    id="student-{{ data.student.id }}" 
@@ -411,15 +411,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Get all enrolled students by finding the disabled checkboxes (which are checked)
-            // For "All Courses", we need to get all students instead
+            // Get all students for the grade level who are enrolled in at least one course
             let enrolledStudentIds = [];
             
-            if (courseIds.length === courseCheckboxes.length && allCoursesCheckbox.checked) {
-                // If "All Courses" is selected, include all students of the current grade
-                enrolledStudentIds = Array.from(
-                    document.querySelectorAll('.student-checkbox')
-                ).map(cb => cb.value);
+            if (allCoursesCheckbox.checked && gradeFilter) {
+                // If "All Courses" is selected, get all students with course enrollments
+                const studentRows = document.querySelectorAll('#students-table tbody tr');
+                studentRows.forEach(row => {
+                    // Find student ID from hidden or visible checkbox
+                    const studentCheckbox = row.querySelector('.student-checkbox');
+                    if (studentCheckbox) {
+                        const studentId = studentCheckbox.value;
+                        
+                        // If student has any enrollments (badge with non-zero number), include them
+                        const courseBadge = row.querySelector('td:nth-child(4) .badge');
+                        if (courseBadge && courseBadge.textContent.trim() > 0) {
+                            enrolledStudentIds.push(studentId);
+                        }
+                    }
+                });
             } else {
                 // Otherwise, just get the specifically enrolled students
                 enrolledStudentIds = Array.from(
@@ -768,7 +778,9 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({
                 student_ids: studentIds,
-                course_id: courseId
+                course_id: courseId,
+                grade_filter: new URLSearchParams(window.location.search).get('grade'),
+                all_courses: document.getElementById('all-courses').checked
             })
         })
         .then(response => response.json())
@@ -810,6 +822,54 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         let processedCourses = 0;
         
+        // If "All Courses" is checked, handle it specially
+        if (allCoursesCheckbox.checked) {
+            const gradeFilter = new URLSearchParams(window.location.search).get('grade');
+            if (gradeFilter) {
+                fetch('/api/batch-disenroll-students/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        student_ids: studentIds,
+                        grade_filter: gradeFilter,
+                        all_courses: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        let message = `<div class="alert alert-success">${data.message}</div>`;
+                        
+                        if (data.error_count > 0 && data.errors.length > 0) {
+                            message += '<div class="mt-3"><strong>Errors:</strong></div><ul>';
+                            data.errors.forEach(error => {
+                                message += `<li>${error}</li>`;
+                            });
+                            message += '</ul>';
+                        }
+                        
+                        showResponse('custom', message);
+                        // Set a flag to clear checkboxes after reload
+                        sessionStorage.setItem('clear_checkboxes', 'true');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showResponse('error', data.message);
+                    }
+                })
+                .catch(error => {
+                    showResponse('error', 'An error occurred: ' + error);
+                });
+                
+                return;
+            }
+        }
+        
+        // Otherwise, process each course individually
         courseIds.forEach(courseId => {
             fetch('/api/batch-disenroll-students/', {
                 method: 'POST',
