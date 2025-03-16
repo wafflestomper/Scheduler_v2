@@ -21,13 +21,32 @@ def get_section_stats(sections):
     
     for section in sections:
         enrolled_count = section.students.count()
-        remaining_capacity = section.max_size - enrolled_count if section.max_size else None
+        has_max_size = section.max_size is not None
+        has_exact_size = section.exact_size is not None
+        
+        # Calculate remaining capacity based on max_size
+        remaining_capacity = section.max_size - enrolled_count if has_max_size else None
+        
+        # Add statistics about exact_size
+        exact_size_diff = None
+        exact_size_status = None
+        if has_exact_size:
+            exact_size_diff = section.exact_size - enrolled_count
+            if exact_size_diff > 0:
+                exact_size_status = 'under'
+            elif exact_size_diff < 0:
+                exact_size_status = 'over'
+            else:
+                exact_size_status = 'exact'
         
         section_stats.append({
             'section': section,
             'enrolled_count': enrolled_count,
             'capacity': section.max_size,
-            'remaining_capacity': remaining_capacity
+            'remaining_capacity': remaining_capacity,
+            'exact_size': section.exact_size,
+            'exact_size_diff': exact_size_diff,
+            'exact_size_status': exact_size_status
         })
     
     return section_stats

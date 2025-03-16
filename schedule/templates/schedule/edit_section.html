@@ -70,6 +70,12 @@
                                 <div class="form-text">Maximum number of students allowed in this section. Leave blank for unlimited.</div>
                             </div>
                             
+                            <div class="mb-3">
+                                <label for="exact_size" class="form-label">Exact Size</label>
+                                <input type="number" class="form-control" id="exact_size" name="exact_size" value="{{ section.exact_size|default:'' }}" min="1">
+                                <div class="form-text">Target exact number of students for this section. The algorithm will try to assign exactly this many students. Leave blank if not needed.</div>
+                            </div>
+                            
                             <div class="alert alert-warning">
                                 <strong>Warning:</strong> Changing the teacher, room, or period may create scheduling conflicts.
                             </div>

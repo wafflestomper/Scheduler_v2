@@ -95,7 +95,8 @@ def assign_trimester_courses(student, group_ids=None, preferred_period=None):
             period_data['trimesters'][trimester][section.course_id] = {
                 'section': section,
                 'enrollment': section.students.count(),
-                'max_size': section.max_size
+                'max_size': section.max_size,
+                'exact_size': section.exact_size
             }
     
     # Prioritize the preferred period if specified
@@ -250,15 +251,29 @@ def assign_courses_greedily(student, courses, sections_by_period, period_ids):
                         
                         # Check if section has space
                         if section_data['max_size'] is None or section_data['enrollment'] < section_data['max_size']:
-                            # Create enrollment
-                            enrollment = Enrollment.objects.create(
-                                student=student,
-                                section=section_data['section']
-                            )
-                            assignments.append(enrollment)
-                            assigned_trimesters.add(trimester)
-                            section_found = True
-                            break
+                            # Check if we should prioritize sections with exact_size
+                            if section_data['exact_size'] is not None:
+                                # If the section has an exact_size and adding this student would make it exact, prioritize it
+                                if section_data['enrollment'] + 1 == section_data['exact_size']:
+                                    # Create enrollment
+                                    enrollment = Enrollment.objects.create(
+                                        student=student,
+                                        section=section_data['section']
+                                    )
+                                    assignments.append(enrollment)
+                                    assigned_trimesters.add(trimester)
+                                    section_found = True
+                                    break
+                            else:
+                                # Create enrollment
+                                enrollment = Enrollment.objects.create(
+                                    student=student,
+                                    section=section_data['section']
+                                )
+                                assignments.append(enrollment)
+                                assigned_trimesters.add(trimester)
+                                section_found = True
+                                break
             
             if not section_found:
                 # If we failed to assign this course, undo enrollments and try again
@@ -364,15 +379,29 @@ def handle_existing_assignments(student, existing_assignments, trimester_groups)
                 
                 # Check if section has space
                 if section_data['max_size'] is None or section_data['enrollment'] < section_data['max_size']:
-                    # Create enrollment
-                    enrollment = Enrollment.objects.create(
-                        student=student,
-                        section=section_data['section']
-                    )
-                    new_assignments.append(enrollment)
-                    available_trimesters.remove(trimester)
-                    course_assigned = True
-                    break
+                    # Check if we're optimizing for exact_size
+                    if section_data['exact_size'] is not None:
+                        # If the section has an exact_size and adding this student would make it closer to exact, prioritize it
+                        if section_data['enrollment'] < section_data['exact_size']:
+                            # Create enrollment
+                            enrollment = Enrollment.objects.create(
+                                student=student,
+                                section=section_data['section']
+                            )
+                            new_assignments.append(enrollment)
+                            available_trimesters.remove(trimester)
+                            course_assigned = True
+                            break
+                    else:
+                        # Create enrollment (standard case)
+                        enrollment = Enrollment.objects.create(
+                            student=student,
+                            section=section_data['section']
+                        )
+                        new_assignments.append(enrollment)
+                        available_trimesters.remove(trimester)
+                        course_assigned = True
+                        break
         
         if not course_assigned:
             successful = False

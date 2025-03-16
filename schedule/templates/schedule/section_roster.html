@@ -32,6 +32,9 @@
                         <h5 class="mb-0">Section {{ roster.section.section_number }}</h5>
                         <div>
                             <span class="badge bg-light text-dark me-2">{{ roster.enrollment_count }} / {{ roster.max_size }}</span>
+                            {% if roster.section.exact_size %}
+                                <span class="badge {% if roster.enrollment_count == roster.section.exact_size %}bg-success{% else %}bg-warning{% endif %} text-white me-2">Target: {{ roster.section.exact_size }}</span>
+                            {% endif %}
                             <span class="badge bg-light text-dark">{{ roster.section.when }}</span>
                         </div>
                     </div>

@@ -17,6 +17,7 @@ def edit_section(request, section_id):
         room_id = request.POST.get('room_id')
         period_id = request.POST.get('period_id')
         max_size = request.POST.get('max_size')
+        exact_size = request.POST.get('exact_size')
         
         # Validate and get related objects
         teacher = get_object_or_404(Teacher, pk=teacher_id) if teacher_id else None
@@ -35,33 +36,42 @@ def edit_section(request, section_id):
                 return redirect('edit_section', section_id=section_id)
         else:
             max_size = None
+            
+        # Validate exact_size
+        if exact_size:
+            try:
+                exact_size = int(exact_size)
+                if exact_size <= 0:
+                    messages.error(request, "Exact size must be a positive integer")
+                    return redirect('edit_section', section_id=section_id)
+            except ValueError:
+                messages.error(request, "Exact size must be a valid number")
+                return redirect('edit_section', section_id=section_id)
+        else:
+            exact_size = None
         
-        # Update section
-        try:
-            with transaction.atomic():
-                section.teacher = teacher
-                section.room = room
-                section.period = period
-                section.max_size = max_size
-                section.save()
-                
-                messages.success(request, f"Section updated successfully!")
-                return redirect('view_sections')
-        except Exception as e:
-            messages.error(request, f"Error updating section: {str(e)}")
-    
-    # For GET request or if there was an error
-    courses = Course.objects.all().order_by('name')
+        # Update section fields
+        section.teacher = teacher
+        section.room = room
+        section.period = period
+        section.max_size = max_size
+        section.exact_size = exact_size
+        
+        section.save()
+        
+        messages.success(request, f"Section '{section.id}' has been updated.")
+        return redirect('view_sections')
+        
+    # Get all teachers, rooms, and periods for the form
     teachers = Teacher.objects.all().order_by('name')
     rooms = Room.objects.all().order_by('number')
-    periods = Period.objects.all().order_by('start_time')
+    periods = Period.objects.all().order_by('number')
     
     context = {
         'section': section,
-        'courses': courses,
         'teachers': teachers,
         'rooms': rooms,
-        'periods': periods
+        'periods': periods,
     }
     
     return render(request, 'schedule/edit_section.html', context)
@@ -435,15 +445,16 @@ def check_conflicts(request, section_id):
 
 def view_sections(request):
     """View all sections."""
-    # Get all sections with related objects
-    sections = Section.objects.all().select_related('course', 'teacher', 'period', 'room')
+    # Get all sections with related data
+    sections = Section.objects.select_related('course', 'teacher', 'period', 'room').annotate(
+        students_count=Count('students')
+    )
     
-    # Group sections by course for better organization
+    # Organize sections by course
     sections_by_course = {}
-    
     for section in sections:
-        course_id = section.course.id if section.course else 'unassigned'
-        course_name = section.course.name if section.course else 'Unassigned'
+        course_id = section.course.id
+        course_name = section.course.name
         
         if course_id not in sections_by_course:
             sections_by_course[course_id] = {
@@ -451,21 +462,32 @@ def view_sections(request):
                 'sections': []
             }
         
-        # Add section details
+        # Calculate max_size display value
+        max_size = section.max_size if section.max_size is not None else "Unlimited"
+        
+        # Add section to the course group
         sections_by_course[course_id]['sections'].append({
             'id': section.id,
             'section_number': section.section_number,
-            'teacher': section.teacher.name if section.teacher else 'Unassigned',
-            'period': section.period.period_name if section.period else 'Unassigned',
-            'room': section.room.number if section.room else 'Unassigned',
-            'students_count': section.students.count(),
-            'max_size': section.max_size or 'Unlimited',
-            'when': section.when
+            'teacher': section.teacher.name if section.teacher else "Unassigned",
+            'period': section.period,
+            'room': section.room,
+            'when': section.get_when_display(),
+            'students_count': section.students_count,
+            'max_size': max_size,
+            'exact_size': section.exact_size
         })
+    
+    # Sort sections by section number within each course
+    for course_id in sections_by_course:
+        sections_by_course[course_id]['sections'].sort(key=lambda s: s['section_number'])
+    
+    # Get the total number of sections
+    total_sections = sections.count()
     
     context = {
         'sections_by_course': sections_by_course,
-        'total_sections': sections.count()
+        'total_sections': total_sections
     }
     
     return render(request, 'schedule/view_sections.html', context)
@@ -480,6 +502,7 @@ def add_section(request):
         room_id = request.POST.get('room')
         section_number = request.POST.get('section_number')
         max_size = request.POST.get('max_size')
+        exact_size = request.POST.get('exact_size')
         when = request.POST.get('when')
         
         # Validate input
@@ -501,6 +524,15 @@ def add_section(request):
             except ValueError:
                 messages.error(request, "Max size must be a positive integer")
                 return redirect('add_section')
+                
+        if exact_size:
+            try:
+                exact_size = int(exact_size)
+                if exact_size <= 0:
+                    raise ValueError()
+            except ValueError:
+                messages.error(request, "Exact size must be a positive integer")
+                return redirect('add_section')
         
         # Get related objects
         course = get_object_or_404(Course, id=course_id)
@@ -517,7 +549,7 @@ def add_section(request):
             return redirect('add_section')
         
         # Create the section
-        section = Section(
+        section = Section.objects.create(
             id=section_id,
             course=course,
             section_number=section_number,
@@ -525,16 +557,12 @@ def add_section(request):
             period=period,
             room=room,
             max_size=max_size,
+            exact_size=exact_size,
             when=when
         )
         
-        try:
-            section.save()
-            messages.success(request, f"Section {section_id} created successfully!")
-            return redirect('view_sections')
-        except Exception as e:
-            messages.error(request, f"Error creating section: {str(e)}")
-            return redirect('add_section')
+        messages.success(request, f"Section '{section_id}' has been added successfully.")
+        return redirect('view_sections')
     
     # For GET request, show the form
     courses = Course.objects.all().order_by('name')

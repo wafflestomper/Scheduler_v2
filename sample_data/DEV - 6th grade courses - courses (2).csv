@@ -1,0 +1,15 @@
+course_id,name,course_type,teachers,grade_level,sections_needed,duration
+ENG6,6th Grade English,CORE,,6,5,YEAR
+MATH6,6th Grade Math,CORE,,6,5,YEAR
+SCI6,6th Grade Science,CORE,,6,5,YEAR
+HIS6,6th Grade History,CORE,,6,5,YEAR
+ART6,6th Grade Art,Elective,,6,3,Trimester
+MUS6,6th Grade Music,Elective,,6,3,Trimester
+WW6,6th Grade Woodworking,Elective,,6,3,Trimester
+CHI6,6th Grade Chinese,Language,,6,5,Trimester
+SPA6,6th Grade Spanish,Language,,6,5,Trimester
+FRE6,6th Grade French,Language,,6,5,Trimester
+HW6,6th Grade Health & Wellness,Required_Elective,,6,3,Trimester
+WH6,6th Grade Wellness & Health,Required_Elective,,6,3,Trimester
+CTA6,6th Grade Coding & Theatre Arts,Required_Elective,,6,3,Trimester
+TAC6,6th Grade Theatre Arts & Coding,Required_Elective,,6,3,Trimester

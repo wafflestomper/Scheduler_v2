@@ -1,0 +1,89 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}Add New Section{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Add New Section</h2>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="course" class="form-label">Course</label>
+                <select name="course" id="course" class="form-select" required>
+                    <option value="">Select a Course</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}">{{ course.name }} ({{ course.get_type_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="section_number" class="form-label">Section Number</label>
+                <input type="number" class="form-control" id="section_number" name="section_number" value="1" min="1" required>
+                <div class="form-text">A unique section identifier number for this course.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="teacher" class="form-label">Teacher</label>
+                <select name="teacher" id="teacher" class="form-select">
+                    <option value="">Select a Teacher (Optional)</option>
+                    {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}">{{ teacher.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="period" class="form-label">Period</label>
+                <select name="period" id="period" class="form-select">
+                    <option value="">Select a Period (Optional)</option>
+                    {% for period in periods %}
+                    <option value="{{ period.id }}">{{ period }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="room" class="form-label">Room</label>
+                <select name="room" id="room" class="form-select">
+                    <option value="">Select a Room (Optional)</option>
+                    {% for room in rooms %}
+                    <option value="{{ room.id }}">{{ room.number }} ({{ room.type }}, Capacity: {{ room.capacity }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="max_size" class="form-label">Max Size</label>
+                <input type="number" class="form-control" id="max_size" name="max_size" min="1">
+                <div class="form-text">Maximum number of students allowed in this section. Leave blank for unlimited.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="exact_size" class="form-label">Exact Size</label>
+                <input type="number" class="form-control" id="exact_size" name="exact_size" min="1">
+                <div class="form-text">Target exact number of students for this section. The algorithm will try to assign exactly this many students. Leave blank if not needed.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="when" class="form-label">When</label>
+                <select name="when" id="when" class="form-select" required>
+                    {% for value, label in when_choices %}
+                    <option value="{{ value }}" {% if value == 'year' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">When this section meets (full year, semester, quarter, etc.)</div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'view_sections' %}" class="btn btn-secondary me-md-2">Cancel</a>
+                <button type="submit" class="btn btn-primary">Create Section</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

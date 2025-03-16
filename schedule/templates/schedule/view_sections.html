@@ -56,6 +56,7 @@
                                         <th>When</th>
                                         <th>Students</th>
                                         <th>Max Size</th>
+                                        <th>Exact Size</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -88,6 +89,19 @@
                                                     {% endif %}
                                                 {% else %}
                                                     {{ section.max_size }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if section.exact_size %}
+                                                    {% if section.students_count > section.exact_size %}
+                                                        <span class="badge bg-danger">{{ section.students_count }}/{{ section.exact_size }}</span>
+                                                    {% elif section.students_count < section.exact_size %}
+                                                        <span class="badge bg-warning">{{ section.students_count }}/{{ section.exact_size }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ section.students_count }}/{{ section.exact_size }}</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    -
                                                 {% endif %}
                                             </td>
                                             <td class="d-flex">

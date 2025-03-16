@@ -45,14 +45,22 @@ def register_students_to_sections(students, course_sections, undo_depth=3, max_i
             current_enrollment = Enrollment.objects.filter(section=section).count()
             # Use default max_size of 25 if not set
             max_size = section.max_size if section.max_size is not None else 25
+            exact_size = section.exact_size
+            
+            # If exact_size is set, use it for balancing decisions
+            target_size = exact_size if exact_size is not None else max_size
+            
             section_data[course_id].append({
                 'section': section,
                 'current_enrollment': current_enrollment,
                 'max_capacity': max_size,
+                'exact_size': exact_size,
+                'has_exact_size': exact_size is not None,
                 'open_seats': max_size - current_enrollment,
+                'target_remaining': (target_size - current_enrollment) if exact_size is not None else (max_size - current_enrollment),
                 'total_seats': max_size
             })
-            print(f"DEBUG: Section {section.id} has {current_enrollment}/{max_size} students")
+            print(f"DEBUG: Section {section.id} has {current_enrollment}/{max_size} students, target: {exact_size if exact_size is not None else 'not set'}")
     
     # Track assignments for potential backtracking
     assignments = []
@@ -65,7 +73,13 @@ def register_students_to_sections(students, course_sections, undo_depth=3, max_i
             print(f"DEBUG: No available sections for course {course_id}")
             return None
         
-        # Sort by open seats (descending), then by total seats (ascending)
+        # Filter sections that have exact_size and are below that target first
+        exact_size_sections = [s for s in available_sections if s['has_exact_size'] and s['current_enrollment'] < s['exact_size']]
+        if exact_size_sections:
+            # Sort by how far they are from their exact_size target (descending)
+            return sorted(exact_size_sections, key=lambda s: (-s['target_remaining'], s['total_seats']))[0]
+        
+        # If no sections with exact_size or all met their targets, sort by open seats (descending), then by total seats (ascending)
         return sorted(available_sections, key=lambda s: (-s['open_seats'], s['total_seats']))[0]
     
     def register_student(student, course_id):

@@ -123,6 +123,7 @@ class Section(models.Model):
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
     students = models.ManyToManyField(Student, through='Enrollment', related_name='sections', blank=True)
     max_size = models.IntegerField(null=True, blank=True)
+    exact_size = models.IntegerField(null=True, blank=True, help_text="If set, this section should have exactly this many students")
     when = models.CharField(max_length=20, default='year',
                           choices=[('year', 'Full Year'), 
                                   ('semester', 'Semester'),

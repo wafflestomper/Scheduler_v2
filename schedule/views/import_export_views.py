@@ -119,7 +119,7 @@ class CSVUploadView(View):
         elif data_type == 'periods':
             return ['name', 'start_time', 'end_time']
         elif data_type == 'sections':
-            return ['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
+            return ['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'exact_size', 'when']
         return []
     
     def process_students(self, reader):
@@ -272,7 +272,8 @@ class CSVUploadView(View):
             period = row[4].strip() if len(row) > 4 and row[4].strip() else None
             room = row[5].strip() if len(row) > 5 and row[5].strip() else None
             max_size = row[6].strip() if len(row) > 6 and row[6].strip() else None
-            when = row[7].strip() if len(row) > 7 and row[7].strip() else 'year'
+            exact_size = row[7].strip() if len(row) > 7 and row[7].strip() else None
+            when = row[8].strip() if len(row) > 8 and row[8].strip() else 'year'
             
             # Convert max_size to integer if provided
             if max_size:
@@ -281,6 +282,14 @@ class CSVUploadView(View):
                 except ValueError:
                     errors.append(f"Row {row_index}: max_size must be a number, got '{max_size}'")
                     max_size = None
+                    
+            # Convert exact_size to integer if provided
+            if exact_size:
+                try:
+                    exact_size = int(exact_size)
+                except ValueError:
+                    errors.append(f"Row {row_index}: exact_size must be a number, got '{exact_size}'")
+                    exact_size = None
             
             # Get related objects or None
             try:
@@ -332,35 +341,35 @@ class CSVUploadView(View):
                 # Create or update the section
                 if section_id:
                     # If section_id is provided, use it
-                    section, created_flag = Section.objects.update_or_create(
+                    section = Section(
                         id=section_id,
-                        defaults={
-                            'course': course,
-                            'section_number': section_number_int,
-                            'teacher': teacher_obj,
-                            'period': period_obj,
-                            'room': room_obj,
-                            'max_size': max_size,
-                            'when': when
-                        }
+                        course=course,
+                        section_number=section_number_int,
+                        teacher=teacher_obj,
+                        period=period_obj,
+                        room=room_obj,
+                        max_size=max_size,
+                        exact_size=exact_size,
+                        when=when
                     )
                 else:
                     # If no section_id provided, create one from course_id and section_number
                     new_section_id = f"{course_id}-{section_number}"
-                    section, created_flag = Section.objects.update_or_create(
+                    section = Section(
                         id=new_section_id,
-                        defaults={
-                            'course': course,
-                            'section_number': section_number_int,
-                            'teacher': teacher_obj,
-                            'period': period_obj,
-                            'room': room_obj,
-                            'max_size': max_size,
-                            'when': when
-                        }
+                        course=course,
+                        section_number=section_number_int,
+                        teacher=teacher_obj,
+                        period=period_obj,
+                        room=room_obj,
+                        max_size=max_size,
+                        exact_size=exact_size,
+                        when=when
                     )
                 
-                if created_flag:
+                section.save()
+                
+                if section_id:
                     created += 1
                 else:
                     updated += 1
@@ -408,9 +417,9 @@ def download_template_csv(request, template_type):
         writer.writerow(['Period 2', '09:00', '09:50'])
     
     elif template_type == 'sections':
-        writer.writerow(['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when'])
-        writer.writerow(['S001', 'C001', '1', 'T001', 'P001', 'R001', '25', 'year'])
-        writer.writerow(['S002', 'C002', '1', '', 'P002', '', '', 'trimester'])  # Example with optional fields blank
+        writer.writerow(['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'exact_size', 'when'])
+        writer.writerow(['S001', 'C001', '1', 'T001', 'P001', 'R001', '25', '25', 'year'])
+        writer.writerow(['S002', 'C002', '1', '', 'P002', '', '', '', 'trimester'])  # Example with optional fields blank
     
     else:
         return HttpResponse(f"Unknown template type: {template_type}", status=400)
