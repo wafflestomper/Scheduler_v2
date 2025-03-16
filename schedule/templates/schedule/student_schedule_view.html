@@ -1,0 +1,191 @@
+{% extends 'schedule/base.html' %}
+{% load schedule_extras %}
+
+{% block title %}{{ student.name }}'s Schedule{% endblock %}
+
+{% block head_extra %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ student.name }}'s Schedule</h1>
+            <p class="lead">Grade {{ student.grade_level }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'view_students' %}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Back to Students
+            </a>
+        </div>
+    </div>
+
+    {% if total_sections > 0 %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Class Schedule</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Time</th>
+                                    <th>Course</th>
+                                    <th>Section</th>
+                                    <th>Teacher</th>
+                                    <th>Room</th>
+                                    <th>When</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for period_id, period_data in schedule.items %}
+                                    {% for section in period_data.sections %}
+                                    <tr>
+                                        <td>{{ period_data.period.period_name|default:"Period " }}{{ period_data.period.slot }}</td>
+                                        <td>{{ period_data.period.start_time|time:"g:i A" }} - {{ period_data.period.end_time|time:"g:i A" }}</td>
+                                        <td>{{ section.course.name }}</td>
+                                        <td>{{ section.section_number }}</td>
+                                        <td>{{ section.teacher.name|default:"TBD" }}</td>
+                                        <td>{{ section.room.number|default:"TBD" }}</td>
+                                        <td>{{ section.get_when_display }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                                
+                                {% if unscheduled_sections %}
+                                    <tr class="table-warning">
+                                        <td colspan="7" class="text-center fw-bold">Unscheduled Classes</td>
+                                    </tr>
+                                    {% for section in unscheduled_sections %}
+                                    <tr class="table-warning">
+                                        <td>Not Scheduled</td>
+                                        <td>--</td>
+                                        <td>{{ section.course.name }}</td>
+                                        <td>{{ section.section_number }}</td>
+                                        <td>{{ section.teacher.name|default:"TBD" }}</td>
+                                        <td>{{ section.room.number|default:"TBD" }}</td>
+                                        <td>{{ section.get_when_display }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill me-2"></i> This student is not currently enrolled in any classes.
+    </div>
+    {% endif %}
+    
+    {% if unassigned_courses %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h3 class="card-title mb-0">Courses Without Assigned Sections</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        The student is enrolled in these courses but has not been assigned to specific sections:
+                    </div>
+                    <ul class="list-group">
+                        {% for course in unassigned_courses %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>{{ course.name }}</span>
+                                <span class="badge bg-secondary">{{ course.get_type_display }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">Schedule Summary</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Total Classes
+                            <span class="badge bg-primary rounded-pill">{{ total_sections }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Scheduled Classes
+                            <span class="badge bg-success rounded-pill">{{ total_sections|subtract:unscheduled_sections|length }}</span>
+                        </li>
+                        {% if unscheduled_sections %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Unscheduled Classes
+                            <span class="badge bg-warning rounded-pill">{{ unscheduled_sections|length }}</span>
+                        </li>
+                        {% endif %}
+                        {% if unassigned_courses %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Unassigned Courses
+                            <span class="badge bg-danger rounded-pill">{{ unassigned_courses|length }}</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'student_detail' student_id=student.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-person-badge"></i> View Student Details
+                        </a>
+                        <a href="{% url 'view_student_schedule' student_id=student.id %}" class="btn btn-outline-info">
+                            <i class="bi bi-calendar-check"></i> Registration View
+                        </a>
+                        <a href="{% url 'edit_student' student_id=student.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-pencil-square"></i> Edit Student
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+    .table thead th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Any additional JavaScript can go here
+});
+</script>
+{% endblock %} 

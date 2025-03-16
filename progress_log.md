@@ -504,4 +504,27 @@ Implemented a comprehensive system for managing section minimum sizes:
 
 This feature helps administrators ensure that sections have enough students to run effectively and provides tools to identify and address sections that are below the minimum threshold.
 
+## Next Steps
+
+### 2024-03-16: Added Three-Group Elective Assignment Algorithm
+
+Extended the scheduling capabilities with an even more advanced algorithm:
+
+1. Created a new algorithm `three_group_elective_algorithm.py` that:
+   - Assigns students to three different elective groups simultaneously:
+     - Art/Music/Woodworking group
+     - Health & Wellness group
+     - Coding & Theatre Arts group
+   - Ensures all three assigned sections are in the same period for each student
+   - Handles backtracking when conflicts arise
+   - Balances section sizes while respecting max_size and exact_size constraints
+   - Uses enhanced conflict resolution for this more complex scheduling problem
+
+2. Updated the registration interface with:
+   - New UI button in the registration actions panel
+   - JavaScript function to handle the three-group assignment
+   - Detailed results display showing success/failure counts for all three groups
+
+3. This algorithm demonstrates the scheduler's capacity to handle increasingly complex scheduling constraints while maintaining balanced section sizes.
+
 ## Next Steps 

@@ -2,7 +2,7 @@ from django.urls import path
 from .views.main_views import index
 from .views.student_views import (
     view_students, student_detail, edit_student, delete_student,
-    export_student_schedules
+    export_student_schedules, student_schedule
 )
 from .views.course_views import (
     view_courses, create_course, edit_course, delete_course,
@@ -52,6 +52,7 @@ urlpatterns = [
     path('student/<str:student_id>/', student_detail, name='student_detail'),
     path('student/<str:student_id>/edit/', edit_student, name='edit_student'),
     path('student/<str:student_id>/delete/', delete_student, name='delete_student'),
+    path('student/<str:student_id>/schedule/', student_schedule, name='student_schedule'),
     path('reports/', admin_reports, name='admin_reports'),
     path('periods/', view_periods, name='view_periods'),
     path('periods/create/', create_period, name='create_period'),

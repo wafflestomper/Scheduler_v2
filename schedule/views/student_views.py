@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 import csv
 from django.views import View
-from ..models import Student, Section, Enrollment, Course
+from ..models import Student, Section, Enrollment, Course, Period
 from ..forms import StudentForm
 import json
 from django.db.models import Q, Count
@@ -60,7 +60,6 @@ def student_detail(request, student_id):
     student = get_object_or_404(Student, pk=student_id)
     
     # Get all periods for organizing the schedule
-    from ..models import Period
     periods = Period.objects.all().order_by('slot')
     
     # Get all sections this student is enrolled in
@@ -151,4 +150,67 @@ def export_student_schedules(request):
                     room_number
                 ])
     
-    return response 
+    return response
+
+
+def student_schedule(request, student_id):
+    """
+    View a student's class schedule in a user-friendly format.
+    Shows all classes the student is registered for, organized by period.
+    """
+    student = get_object_or_404(Student, pk=student_id)
+    
+    # Get all periods for organizing the schedule
+    periods = Period.objects.all().order_by('start_time')
+    
+    # Get all section enrollments for this student
+    enrollments = Enrollment.objects.filter(
+        student=student
+    ).select_related(
+        'section', 
+        'section__course', 
+        'section__period', 
+        'section__teacher', 
+        'section__room'
+    )
+    
+    # Get courses the student is enrolled in but not assigned to sections
+    enrolled_course_ids = [enrollment.section.course.id for enrollment in enrollments]
+    unassigned_courses = Course.objects.filter(
+        student_enrollments__student=student
+    ).exclude(
+        id__in=enrolled_course_ids
+    )
+    
+    # Group enrollments by period for display
+    schedule_by_period = {}
+    unscheduled_sections = []
+    
+    for enrollment in enrollments:
+        section = enrollment.section
+        if section.period:
+            period_id = section.period.id
+            if period_id not in schedule_by_period:
+                schedule_by_period[period_id] = {
+                    'period': section.period,
+                    'sections': []
+                }
+            schedule_by_period[period_id]['sections'].append(section)
+        else:
+            unscheduled_sections.append(section)
+    
+    # Sort the periods by their start time
+    sorted_schedule = {}
+    for period in periods:
+        if period.id in schedule_by_period:
+            sorted_schedule[period.id] = schedule_by_period[period.id]
+    
+    context = {
+        'student': student,
+        'schedule': sorted_schedule,
+        'unscheduled_sections': unscheduled_sections,
+        'unassigned_courses': unassigned_courses,
+        'total_sections': enrollments.count()
+    }
+    
+    return render(request, 'schedule/student_schedule_view.html', context) 

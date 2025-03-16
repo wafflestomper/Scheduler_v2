@@ -66,12 +66,9 @@
                                         </td>
                                         <td>{{ student.grade_level }}</td>
                                         <td class="text-end">
+                                            <a href="{% url 'student_detail' student_id=student.id %}" class="btn btn-sm btn-outline-primary">View</a>
                                             {% if student.id in scheduled_students %}
-                                            <a href="{% url 'student_schedules' %}?student_id={{ student.id }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-calendar-week"></i> View Schedule
-                                            </a>
-                                            {% else %}
-                                            <span class="text-muted">No Schedule</span>
+                                            <a href="{% url 'student_schedule' student_id=student.id %}" class="btn btn-sm btn-outline-info">Schedule</a>
                                             {% endif %}
                                         </td>
                                     </tr>
