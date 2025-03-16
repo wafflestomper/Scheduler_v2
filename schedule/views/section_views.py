@@ -65,7 +65,7 @@ def edit_section(request, section_id):
     # Get all teachers, rooms, and periods for the form
     teachers = Teacher.objects.all().order_by('name')
     rooms = Room.objects.all().order_by('number')
-    periods = Period.objects.all().order_by('number')
+    periods = Period.objects.all().order_by('slot')
     
     context = {
         'section': section,
