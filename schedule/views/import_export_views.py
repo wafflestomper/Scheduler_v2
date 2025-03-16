@@ -119,7 +119,7 @@ class CSVUploadView(View):
         elif data_type == 'periods':
             return ['name', 'start_time', 'end_time']
         elif data_type == 'sections':
-            return ['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'exact_size', 'when']
+            return ['course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
         return []
     
     def process_students(self, reader):
