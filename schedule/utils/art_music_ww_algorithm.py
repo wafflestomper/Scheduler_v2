@@ -195,23 +195,23 @@ def register_art_music_ww_courses(grade_level, undo_depth=3):
             'ww_failure': 0
         }
     
-    # Get art courses for this grade level
+    # Get art courses by ID for this grade level
     art_courses = Course.objects.filter(
-        type='ART',
+        id='ART6',
         grade_level=grade_level
     )
     print(f"DEBUG: Found {art_courses.count()} art courses for grade {grade_level}")
     
-    # Get music courses for this grade level
+    # Get music courses by ID for this grade level
     music_courses = Course.objects.filter(
-        type='MUSIC',
+        id='MUS6',
         grade_level=grade_level
     )
     print(f"DEBUG: Found {music_courses.count()} music courses for grade {grade_level}")
     
-    # Get woodworking courses for this grade level
+    # Get woodworking courses by ID for this grade level
     ww_courses = Course.objects.filter(
-        type='WW',
+        id='WW6',
         grade_level=grade_level
     )
     print(f"DEBUG: Found {ww_courses.count()} woodworking courses for grade {grade_level}")
