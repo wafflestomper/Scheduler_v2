@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const runLanguageCoreBtn = document.getElementById('run-language-core-btn');
     const runArtMusicWWBtn = document.getElementById('run-art-music-ww-btn');
     const runTwoElectiveGroupsBtn = document.getElementById('run-two-elective-groups-btn');
+    const runThreeElectiveGroupsBtn = document.getElementById('run-three-elective-groups-btn');
     const deregisterAllBtn = document.getElementById('deregister-all-btn');
     const courseSelect = document.getElementById('course-select');
     const courseRegisterBtns = document.querySelectorAll('.course-register-btn');
@@ -125,6 +126,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             assignTwoElectiveGroups();
+        });
+    }
+    
+    // Run the new three-elective-groups algorithm
+    if (runThreeElectiveGroupsBtn) {
+        runThreeElectiveGroupsBtn.addEventListener('click', () => {
+            if (confirm('This will assign students to three elective groups (Art/Music/WW, Health/Wellness, Coding/Theatre Arts) ' +
+                'ensuring all selected courses are in the same period. Continue?')) {
+                assignThreeElectiveGroups();
+            }
         });
     }
     
@@ -477,6 +488,123 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset cursor and buttons
             document.body.style.cursor = 'default';
             if (runTwoElectiveGroupsBtn) runTwoElectiveGroupsBtn.disabled = false;
+            
+            // Show error
+            resultModalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    An error occurred: ${error.message}
+                </div>
+            `;
+            resultModal.show();
+        });
+    }
+    
+    // Function to call the three-elective-groups assignment API
+    function assignThreeElectiveGroups() {
+        // Show loading state
+        document.body.style.cursor = 'wait';
+        
+        // Disable buttons
+        if (runThreeElectiveGroupsBtn) runThreeElectiveGroupsBtn.disabled = true;
+        
+        // Call the API
+        fetch('/api/section-registration/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                action: 'assign_three_elective_groups',
+                grade_level: 6,
+                undo_depth: 3
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (runThreeElectiveGroupsBtn) runThreeElectiveGroupsBtn.disabled = false;
+            
+            // Create results HTML
+            let resultsHtml = `
+                <div class="alert ${data.status === 'success' ? 'alert-success' : data.status === 'partial' ? 'alert-warning' : 'alert-danger'}">
+                    ${data.message}
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="card ${data.amw_success > 0 ? 'bg-success' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Art/Music/WW Success</h5>
+                                <p class="display-4">${data.amw_success}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card ${data.amw_failure > 0 ? 'bg-danger' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Art/Music/WW Failure</h5>
+                                <p class="display-4">${data.amw_failure}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="card ${data.hw_success > 0 ? 'bg-success' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Health & Wellness Success</h5>
+                                <p class="display-4">${data.hw_success}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card ${data.hw_failure > 0 ? 'bg-danger' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Health & Wellness Failure</h5>
+                                <p class="display-4">${data.hw_failure}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="card ${data.coding_theatre_success > 0 ? 'bg-success' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Coding & Theatre Success</h5>
+                                <p class="display-4">${data.coding_theatre_success}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card ${data.coding_theatre_failure > 0 ? 'bg-danger' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Coding & Theatre Failure</h5>
+                                <p class="display-4">${data.coding_theatre_failure}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultModalBody.innerHTML = resultsHtml;
+            resultModal.show();
+            
+            // Only auto-reload if successful
+            if (data.status === 'success') {
+                // Reload page after 2 seconds to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (runThreeElectiveGroupsBtn) runThreeElectiveGroupsBtn.disabled = false;
             
             // Show error
             resultModalBody.innerHTML = `
