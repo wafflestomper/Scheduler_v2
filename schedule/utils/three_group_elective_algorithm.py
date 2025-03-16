@@ -360,7 +360,7 @@ def register_three_elective_groups(grade_level, undo_depth=3):
     
     # Get Coding & Theatre Arts courses
     coding_theatre_courses = Course.objects.filter(
-        id__in=['CODE6', 'THEA6'],
+        id__in=['CTA6', 'TAC6'],
         grade_level=grade_level
     )
     print(f"DEBUG: Found {coding_theatre_courses.count()} Coding & Theatre Arts courses")
