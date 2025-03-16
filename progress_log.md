@@ -414,4 +414,39 @@ Enhanced the section assignment system with a unified algorithm that handles all
 
 This enhancement automates the assignment of all course types - regular, language, and trimester courses - in a single operation when administrators click the "Assign All Students to Sections" button, eliminating the need for separate manual assignments for special course types.
 
-## Next Steps 
+## Next Steps
+
+## 2023-10-22 15:30 - Implemented new language-core algorithm
+
+Created a new algorithm for assigning 6th-grade students to language and core courses. The algorithm follows a more flexible approach:
+
+1. Register students into sections with the most open seats
+2. Equalize enrollment across sections
+3. If equal, prioritize courses with least total seats
+4. Implement backtracking when assignments fail (undo previous assignments and try alternatives)
+
+Changes made:
+- Created new `language_core_algorithm.py` with the flexible registration algorithm
+- Added API endpoint to run the algorithm in `section_registration_views.py`
+- Added UI button and JavaScript to run the algorithm from the section registration page
+- Implemented detailed result reporting
+
+This approach should better handle complex scheduling constraints and result in more balanced class sizes.
+
+## 2023-10-22 16:45 - Merged language-core-algorithm branch
+
+Successfully merged the language-core-algorithm branch into main after testing and fixing issues with the implementation:
+
+1. Fixed course type case matching to work with existing database values ('Language' and 'CORE')
+2. Updated the algorithm to use section.max_size for capacity calculation
+3. Added extensive debug logging to aid in troubleshooting
+
+The algorithm now correctly assigns students to language and core courses using the backtracking approach when needed.
+
+## Next Steps
+
+1. Test the new algorithm with real data and compare results with previous approaches
+2. Fine-tune the backtracking parameters if needed
+3. Consider extending the algorithm to handle trimester course assignments
+4. Add more detailed logging to track algorithm decisions for troubleshooting
+5. Consider adding options to customize algorithm parameters through the UI 
