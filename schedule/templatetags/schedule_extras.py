@@ -12,3 +12,8 @@ def subtract(value, arg):
             return value - len(arg)
         except (ValueError, TypeError):
             return 0
+
+@register.filter
+def get_item(dictionary, key):
+    """Get an item from a dictionary using a variable key."""
+    return dictionary.get(key, None)
