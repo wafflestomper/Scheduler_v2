@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     Teacher, Room, Student, Course, Period, 
     Section, Enrollment, CourseEnrollment, CourseGroup,
-    TrimesterCourseGroup
+    TrimesterCourseGroup, SectionSettings
 )
 
 @admin.register(Teacher)
@@ -64,3 +64,20 @@ class TrimesterCourseGroupAdmin(admin.ModelAdmin):
     list_filter = ('group_type',)
     search_fields = ('name', 'description')
     filter_horizontal = ('courses',)
+
+@admin.register(SectionSettings)
+class SectionSettingsAdmin(admin.ModelAdmin):
+    list_display = ('name', 'core_min_size', 'elective_min_size', 'required_elective_min_size', 
+                   'language_min_size', 'default_max_size', 'enforce_min_sizes', 'auto_cancel_below_min',
+                   'updated_at')
+    fieldsets = (
+        ('General', {
+            'fields': ('name', 'enforce_min_sizes', 'auto_cancel_below_min')
+        }),
+        ('Minimum Sizes by Course Type', {
+            'fields': ('core_min_size', 'elective_min_size', 'required_elective_min_size', 'language_min_size')
+        }),
+        ('Default Maximum Size', {
+            'fields': ('default_max_size',)
+        }),
+    )

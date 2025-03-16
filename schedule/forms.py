@@ -1,6 +1,5 @@
 from django import forms
-from .models import Student
-from schedule.models import Course, Period
+from .models import Student, Teacher, Room, Course, Section, Period, SectionSettings
 
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(
@@ -124,4 +123,52 @@ class TrimesterCourseForm(forms.Form):
             ('', '-- No preference --')
         ] + [
             (p.id, str(p)) for p in Period.objects.all().order_by('slot')
-        ] 
+        ]
+
+class SectionForm(forms.ModelForm):
+    class Meta:
+        model = Section
+        fields = ['id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'exact_size', 'when']
+        widgets = {
+            'id': forms.TextInput(attrs={'class': 'form-control'}),
+            'course': forms.Select(attrs={'class': 'form-control'}),
+            'section_number': forms.NumberInput(attrs={'class': 'form-control'}),
+            'teacher': forms.Select(attrs={'class': 'form-control'}),
+            'period': forms.Select(attrs={'class': 'form-control'}),
+            'room': forms.Select(attrs={'class': 'form-control'}),
+            'max_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'exact_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'when': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+class SectionSettingsForm(forms.ModelForm):
+    """
+    Form for the section settings model.
+    """
+    class Meta:
+        model = SectionSettings
+        fields = [
+            'name', 
+            'core_min_size', 'elective_min_size', 'required_elective_min_size', 'language_min_size',
+            'default_max_size', 'enforce_min_sizes', 'auto_cancel_below_min'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'core_min_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'elective_min_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'required_elective_min_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'language_min_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'default_max_size': forms.NumberInput(attrs={'class': 'form-control'}),
+            'enforce_min_sizes': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'auto_cancel_below_min': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'name': 'A descriptive name for these settings (e.g., "2024-2025 Academic Year")',
+            'core_min_size': 'Minimum number of students for core course sections',
+            'elective_min_size': 'Minimum number of students for elective course sections',
+            'required_elective_min_size': 'Minimum number of students for required elective course sections',
+            'language_min_size': 'Minimum number of students for language course sections',
+            'default_max_size': 'Default maximum section size when not specified at the section level',
+            'enforce_min_sizes': 'Whether scheduling algorithms should consider minimum sizes',
+            'auto_cancel_below_min': 'Whether to automatically flag sections below minimum size for review',
+        } 

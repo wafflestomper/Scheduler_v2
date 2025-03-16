@@ -35,6 +35,7 @@ from .views.section_registration_views import (
     section_registration, registration_home, view_student_schedule,
     perfect_balance_assignment, assign_language_course_sections, assign_trimester_course_sections
 )
+from .views.settings_views import section_settings
 
 urlpatterns = [
     path('', index, name='index'),
@@ -97,4 +98,7 @@ urlpatterns = [
     path('sections/<str:section_id>/delete/', delete_section, name='delete_section'),
     path('sections/<str:section_id>/conflicts/', check_conflicts, name='check_conflicts'),
     path('course/<str:course_id>/roster/', section_roster, name='section_roster'),
+    
+    # Settings
+    path('settings/', section_settings, name='section_settings'),
 ] 

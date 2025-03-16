@@ -180,6 +180,185 @@
             </div>
         </div>
     </div>
+    
+    <!-- Section Minimum Size Compliance -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0">Section Size Compliance</h4>
+                </div>
+                <div class="card-body">
+                    {% if settings %}
+                        <div class="mb-3">
+                            <h5>Current Settings</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Course Type</th>
+                                            <th>Minimum Size</th>
+                                            <th>Enforce Minimums</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Core</td>
+                                            <td>{{ settings.core_min_size }}</td>
+                                            <td rowspan="4" class="align-middle text-center">
+                                                {% if settings.enforce_min_sizes %}
+                                                    <span class="badge bg-success">Yes</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">No</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Elective</td>
+                                            <td>{{ settings.elective_min_size }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Required Elective</td>
+                                            <td>{{ settings.required_elective_min_size }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Language</td>
+                                            <td>{{ settings.language_min_size }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <h5>Section Size Summary</h5>
+                        {% if section_stats %}
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title">Overall Compliance</h6>
+                                                <div class="progress mb-2" style="height: 25px;">
+                                                    {% if section_stats.total_sections > 0 %}
+                                                        <div class="progress-bar bg-success" role="progressbar" 
+                                                             style="width: {{ section_stats.sections_at_or_above_min|default:0|floatformat:0 }}%;" 
+                                                             aria-valuenow="{{ section_stats.sections_at_or_above_min|default:0 }}" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="{{ section_stats.total_sections }}">
+                                                            {{ section_stats.sections_at_or_above_min|default:0 }} sections meet minimums
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <p class="card-text">
+                                                    <strong>{{ section_stats.sections_at_or_above_min|default:0 }}/{{ section_stats.total_sections }}</strong> 
+                                                    sections meet minimum size requirements 
+                                                    ({{ section_stats.sections_at_or_above_min|default:0|floatformat:0 }}%)
+                                                </p>
+                                                {% if section_stats.sections_below_min > 0 %}
+                                                    <div class="alert alert-warning">
+                                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                                        {{ section_stats.sections_below_min }} sections are below minimum size
+                                                    </div>
+                                                {% else %}
+                                                    <div class="alert alert-success">
+                                                        <i class="bi bi-check-circle-fill"></i>
+                                                        All sections meet minimum size requirements
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title">By Course Type</h6>
+                                                <table class="table table-sm table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Course Type</th>
+                                                            <th>Total</th>
+                                                            <th>Below Min</th>
+                                                            <th>%</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for type, data in section_stats.by_course_type.items %}
+                                                            {% if data.total > 0 %}
+                                                                <tr>
+                                                                    <td>{{ type|title }}</td>
+                                                                    <td>{{ data.total }}</td>
+                                                                    <td>{{ data.below_min }}</td>
+                                                                    <td>
+                                                                        {% if data.total > 0 %}
+                                                                            {% widthratio data.below_min data.total 100 %}%
+                                                                        {% else %}
+                                                                            0%
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if sections_below_min %}
+                            <h5>Sections Below Minimum Size</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Section</th>
+                                            <th>Type</th>
+                                            <th>Current Size</th>
+                                            <th>Minimum Size</th>
+                                            <th>Shortage</th>
+                                            <th>Period</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for section, current_size, min_size in sections_below_min %}
+                                            <tr>
+                                                <td>{{ section.course.name }}</td>
+                                                <td>{{ section.section_number }}</td>
+                                                <td>{{ section.course.get_type_display }}</td>
+                                                <td>{{ current_size }}</td>
+                                                <td>{{ min_size }}</td>
+                                                <td class="text-danger">{{ min_size|sub:current_size }}</td>
+                                                <td>{{ section.period }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-end mt-2">
+                                <a href="{% url 'section_settings' %}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-gear-fill"></i> Adjust Minimum Size Settings
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle-fill"></i>
+                                All sections meet minimum size requirements.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            No section settings have been configured.
+                            <a href="{% url 'section_settings' %}" class="alert-link">Configure settings now</a>.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

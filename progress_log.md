@@ -449,4 +449,27 @@ The algorithm now correctly assigns students to language and core courses using 
 2. Fine-tune the backtracking parameters if needed
 3. Consider extending the algorithm to handle trimester course assignments
 4. Add more detailed logging to track algorithm decisions for troubleshooting
-5. Consider adding options to customize algorithm parameters through the UI 
+5. Consider adding options to customize algorithm parameters through the UI
+
+### 2024-03-16: Two-Group Elective Assignment with Same-Period Constraint
+
+Implemented a more advanced algorithm for handling two course groups simultaneously:
+
+1. Created a new algorithm file `two_group_elective_algorithm.py` that:
+   - Assigns students to both Art/Music/WW and Health & Wellness elective groups
+   - Ensures both selected courses are in the same period for each student
+   - Balances enrollments across sections while respecting max_size and exact_size constraints
+   - Uses backtracking to resolve conflicts when students can't be assigned
+
+2. Added a new API endpoint to register students using this algorithm
+
+3. Added a new button "6th Grade Art/Music/WW + Health/Wellness (Same Period)" to the registration actions interface
+
+4. Fixed a UNIQUE constraint error by adding checks to prevent duplicate enrollments:
+   - Now checks if a student is already enrolled in a section before attempting to create a new enrollment
+   - Filters out students who already have enrollments in both course groups
+   - Handles existing enrollments gracefully
+
+This implementation significantly enhances scheduling capabilities by handling the more complex case where students need to be registered for two different course groups while ensuring they're scheduled in the same period.
+
+## Next Steps 

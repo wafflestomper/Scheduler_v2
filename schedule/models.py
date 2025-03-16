@@ -220,3 +220,50 @@ class TrimesterCourseGroup(models.Model):
     
     def get_courses_count(self):
         return self.courses.count()
+
+class SectionSettings(models.Model):
+    """
+    Global settings for section min/max sizes based on course type.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    
+    # Minimum section sizes by course type
+    core_min_size = models.IntegerField(default=15, help_text="Minimum size for core courses")
+    elective_min_size = models.IntegerField(default=10, help_text="Minimum size for elective courses")
+    required_elective_min_size = models.IntegerField(default=12, help_text="Minimum size for required elective courses")
+    language_min_size = models.IntegerField(default=12, help_text="Minimum size for language courses")
+    
+    # Default section max sizes (if not specified at the section level)
+    default_max_size = models.IntegerField(default=30, help_text="Default maximum section size if not specified")
+    
+    # Whether to enforce minimum sizes in algorithms
+    enforce_min_sizes = models.BooleanField(default=True, help_text="Whether algorithms should enforce minimum sizes")
+    
+    # Cancel sections below minimum threshold
+    auto_cancel_below_min = models.BooleanField(default=False, help_text="Automatically mark sections for cancellation if below min size")
+    
+    # Created/modified timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Section Settings"
+        verbose_name_plural = "Section Settings"
+    
+    def __str__(self):
+        return self.name
+    
+    def get_min_size_for_course_type(self, course_type):
+        """
+        Get the minimum section size for the given course type.
+        """
+        if course_type == 'core':
+            return self.core_min_size
+        elif course_type == 'elective':
+            return self.elective_min_size
+        elif course_type == 'required_elective':
+            return self.required_elective_min_size
+        elif course_type == 'language':
+            return self.language_min_size
+        else:
+            return self.elective_min_size  # Default to elective min size

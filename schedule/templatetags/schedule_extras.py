@@ -22,4 +22,15 @@ def startswith(text, starts):
 @register.filter
 def add_class(field, css_class):
     """Add a CSS class to a Django form field."""
-    return field.as_widget(attrs={"class": css_class}) 
+    return field.as_widget(attrs={"class": css_class})
+
+@register.filter
+def sub(value, arg):
+    """Subtract the arg from the value."""
+    try:
+        return int(value) - int(arg)
+    except (ValueError, TypeError):
+        try:
+            return float(value) - float(arg)
+        except (ValueError, TypeError):
+            return 0 

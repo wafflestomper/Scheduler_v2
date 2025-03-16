@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views import View
-from ..models import Teacher, Room, Student, Course, Period, Section
+from ..models import Teacher, Room, Student, Course, Period, Section, Enrollment, SectionSettings, CourseEnrollment
 import constraint
 import json
 from django.db import transaction
+from ..utils.section_utils import get_sections_below_min_size, get_sections_stats
 
 
 def schedule_generation(request):
@@ -98,6 +99,12 @@ def admin_reports(request):
     # Find any schedule conflicts
     conflicts = find_schedule_conflicts()
     
+    # Get section statistics
+    section_stats = get_sections_stats()
+    
+    # Get sections below minimum size
+    sections_below_min = get_sections_below_min_size()
+    
     # Prepare context for template
     context = {
         'total_students': total_students,
@@ -112,7 +119,10 @@ def admin_reports(request):
         'room_utilization': room_utilization,
         'period_utilization': period_utilization,
         'conflicts': conflicts,
-        'conflict_count': len(conflicts)
+        'conflict_count': len(conflicts),
+        'section_stats': section_stats,
+        'sections_below_min': sections_below_min,
+        'settings': SectionSettings.objects.first(),
     }
     
     return render(request, 'schedule/admin_reports.html', context)
