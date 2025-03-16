@@ -153,33 +153,46 @@ def register_students_to_two_groups(students, first_group_sections, second_group
         # Create enrollments
         new_assignments = []
         
-        # Enroll in first section
-        enrollment1 = Enrollment.objects.create(student=student, section=first_section['section'])
-        new_assignments.append(enrollment1)
+        # Check if student is already enrolled in first section
+        if not Enrollment.objects.filter(student=student, section=first_section['section']).exists():
+            # Enroll in first section
+            enrollment1 = Enrollment.objects.create(student=student, section=first_section['section'])
+            new_assignments.append(enrollment1)
+            
+            # Update course enrollment stats
+            for section_data in first_group_by_period[period_id]:
+                if section_data['section'] == first_section['section']:
+                    section_data['current_enrollment'] += 1
+        else:
+            print(f"DEBUG: Student {student.id} already enrolled in section {first_section['section'].id}")
         
-        # Update course enrollment stats
-        for section_data in first_group_by_period[period_id]:
-            if section_data['section'] == first_section['section']:
-                section_data['current_enrollment'] += 1
-                
-        # Enroll in second section
-        enrollment2 = Enrollment.objects.create(student=student, section=second_section['section'])
-        new_assignments.append(enrollment2)
+        # Check if student is already enrolled in second section
+        if not Enrollment.objects.filter(student=student, section=second_section['section']).exists():
+            # Enroll in second section
+            enrollment2 = Enrollment.objects.create(student=student, section=second_section['section'])
+            new_assignments.append(enrollment2)
+            
+            # Update course enrollment stats
+            for section_data in second_group_by_period[period_id]:
+                if section_data['section'] == second_section['section']:
+                    section_data['current_enrollment'] += 1
+        else:
+            print(f"DEBUG: Student {student.id} already enrolled in section {second_section['section'].id}")
         
-        # Update course enrollment stats
-        for section_data in second_group_by_period[period_id]:
-            if section_data['section'] == second_section['section']:
-                section_data['current_enrollment'] += 1
-                
-        # Track for potential backtracking
-        assignments.extend(new_assignments)
-        assignment_history.append((student, period_id, [
-            (first_section['section'], first_section['course_id']),
-            (second_section['section'], second_section['course_id'])
-        ]))
-        
-        print(f"DEBUG: Registered student {student.id} to period {period_id}: {first_section['section'].id} and {second_section['section'].id}")
-        return True, new_assignments
+        # Only add to assignments history if we actually created new enrollments
+        if new_assignments:
+            assignments.extend(new_assignments)
+            assignment_history.append((student, period_id, [
+                (first_section['section'], first_section['course_id']),
+                (second_section['section'], second_section['course_id'])
+            ]))
+            
+            print(f"DEBUG: Registered student {student.id} to period {period_id}: {first_section['section'].id} and {second_section['section'].id}")
+            return True, new_assignments
+        else:
+            # If student was already enrolled in both sections, consider this a success
+            print(f"DEBUG: Student {student.id} was already enrolled in both sections")
+            return True, []
     
     def undo_registrations(count):
         """Undo the last 'count' students' registrations."""
@@ -385,8 +398,35 @@ def register_two_elective_groups(grade_level, undo_depth=3):
     for enrollment in existing_enrollments:
         student_course_enrollments[enrollment.student_id].add(enrollment.course_id)
     
+    # Check existing section enrollments to avoid duplicates
+    existing_section_enrollments = Enrollment.objects.filter(
+        student__in=students,
+        section__course__id__in=all_course_ids
+    ).select_related('student', 'section__course')
+    
+    # Track students who already have section enrollments by course group
+    students_with_amw_sections = set()
+    students_with_hw_sections = set()
+    
+    for enrollment in existing_section_enrollments:
+        course_id = enrollment.section.course.id
+        student_id = enrollment.student.id
+        
+        if course_id in [c.id for c in amw_course_list]:
+            students_with_amw_sections.add(student_id)
+        elif course_id in [c.id for c in hw_course_list]:
+            students_with_hw_sections.add(student_id)
+    
+    # Filter out students who already have enrollments in both course groups
+    students_to_process = [s for s in students if not (
+        s.id in students_with_amw_sections and s.id in students_with_hw_sections
+    )]
+    
+    if len(students_to_process) < len(students):
+        print(f"DEBUG: Skipping {len(students) - len(students_to_process)} students who already have enrollments in both course groups")
+    
     # Create missing course enrollments
-    for student in students:
+    for student in students_to_process:
         # Ensure each student is enrolled in at least one Art/Music/WW course
         amw_enrolled = any(course_id in student_course_enrollments[student.id] for course_id in [c.id for c in amw_course_list])
         if not amw_enrolled and amw_course_list:
@@ -406,23 +446,23 @@ def register_two_elective_groups(grade_level, undo_depth=3):
             student_course_enrollments[student.id].add(course.id)
     
     # Run the two-group registration algorithm
-    print(f"DEBUG: Starting registration algorithm for {len(students)} students")
+    print(f"DEBUG: Starting registration algorithm for {len(students_to_process)} students")
     success, message, assignments = register_students_to_two_groups(
-        list(students),
+        students_to_process,
         amw_sections,
         hw_sections,
         undo_depth=undo_depth,
-        max_iterations=len(students) * 5  # Allow more iterations for complex schedules
+        max_iterations=len(students_to_process) * 5  # Allow more iterations for complex schedules
     )
     
     if success:
-        print(f"DEBUG: Registration successful for all {len(students)} students")
+        print(f"DEBUG: Registration successful for all {len(students_to_process)} students")
         return {
             'status': 'success',
             'message': 'Successfully registered all students to both course groups',
-            'amw_success': len(students),
+            'amw_success': len(students_to_process),
             'amw_failure': 0,
-            'hw_success': len(students),
+            'hw_success': len(students_to_process),
             'hw_failure': 0
         }
     else:
@@ -434,7 +474,7 @@ def register_two_elective_groups(grade_level, undo_depth=3):
         for course in amw_course_list:
             enrolled = set(Enrollment.objects.filter(
                 section__course=course,
-                student__in=students
+                student__in=students_to_process
             ).values_list('student_id', flat=True))
             amw_enrolled_students.update(enrolled)
         
@@ -443,21 +483,21 @@ def register_two_elective_groups(grade_level, undo_depth=3):
         for course in hw_course_list:
             enrolled = set(Enrollment.objects.filter(
                 section__course=course,
-                student__in=students
+                student__in=students_to_process
             ).values_list('student_id', flat=True))
             hw_enrolled_students.update(enrolled)
             
         amw_success = len(amw_enrolled_students)
         hw_success = len(hw_enrolled_students)
         
-        print(f"DEBUG: Art/Music/WW success: {amw_success}/{len(students)}")
-        print(f"DEBUG: Health & Wellness success: {hw_success}/{len(students)}")
+        print(f"DEBUG: Art/Music/WW success: {amw_success}/{len(students_to_process)}")
+        print(f"DEBUG: Health & Wellness success: {hw_success}/{len(students_to_process)}")
         
         return {
             'status': 'partial',
             'message': message,
             'amw_success': amw_success,
-            'amw_failure': len(students) - amw_success,
+            'amw_failure': len(students_to_process) - amw_success,
             'hw_success': hw_success,
-            'hw_failure': len(students) - hw_success
+            'hw_failure': len(students_to_process) - hw_success
         } 
