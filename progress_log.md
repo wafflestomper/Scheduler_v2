@@ -472,4 +472,36 @@ Implemented a more advanced algorithm for handling two course groups simultaneou
 
 This implementation significantly enhances scheduling capabilities by handling the more complex case where students need to be registered for two different course groups while ensuring they're scheduled in the same period.
 
+## Next Steps
+
+### 2024-03-16: Added Section Minimum Size Settings
+
+Implemented a comprehensive system for managing section minimum sizes:
+
+1. Created a new `SectionSettings` model to store minimum size settings for different course types:
+   - Core courses (default: 15 students)
+   - Elective courses (default: 10 students)
+   - Required elective courses (default: 12 students)
+   - Language courses (default: 12 students)
+   - Added a default maximum size setting (default: 30 students)
+   - Added options to enforce minimum sizes and auto-cancel sections below minimums
+
+2. Created a settings administration page:
+   - User-friendly interface for adjusting minimum sizes
+   - Clear explanations of how settings are used
+   - Ability to enable/disable enforcement of minimum sizes
+
+3. Added reporting features:
+   - New section in admin reports showing sections below minimum size
+   - Statistics on compliance by course type
+   - Visual indicators of overall compliance
+   - Direct links to adjust settings
+
+4. Added utility functions to support minimum size enforcement in algorithms:
+   - `get_section_min_size()` to determine the appropriate minimum for a section
+   - `get_sections_below_min_size()` to identify sections that need attention
+   - `get_sections_stats()` to generate statistics for reporting
+
+This feature helps administrators ensure that sections have enough students to run effectively and provides tools to identify and address sections that are below the minimum threshold.
+
 ## Next Steps 
