@@ -59,7 +59,7 @@ class Course(models.Model):
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=20, choices=COURSE_TYPES)
     grade_level = models.IntegerField()
-    max_students = models.IntegerField()
+    max_students = models.IntegerField(null=True, blank=True)
     eligible_teachers = models.TextField(help_text="Format: 'T001|T002'")
     duration = models.CharField(max_length=10, choices=DURATION_TYPES, default='year')
     sections_needed = models.IntegerField(default=1)

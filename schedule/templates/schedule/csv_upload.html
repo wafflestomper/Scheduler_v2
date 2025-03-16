@@ -242,7 +242,7 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>course_id,name,course_type,teachers,grade_level,sections_needed,duration,max_size</code></p>
+                                <p><code>course_id,name,course_type,teachers,grade_level,sections_needed,duration</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
@@ -256,7 +256,6 @@
                                                 <th>grade_level</th>
                                                 <th>sections_needed</th>
                                                 <th>duration</th>
-                                                <th>max_size</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -268,7 +267,6 @@
                                                 <td>6</td>
                                                 <td>2</td>
                                                 <td>year</td>
-                                                <td>30</td>
                                             </tr>
                                             <tr>
                                                 <td>C002</td>
@@ -278,7 +276,6 @@
                                                 <td>7</td>
                                                 <td>1</td>
                                                 <td>year</td>
-                                                <td>25</td>
                                             </tr>
                                             <tr>
                                                 <td>C003</td>
@@ -288,7 +285,6 @@
                                                 <td>0</td>
                                                 <td>1</td>
                                                 <td>trimester</td>
-                                                <td>28</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -392,14 +388,15 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>course_id,section_number,teacher,period,room,max_size,when</code></p>
+                                <p><code>section_id,course,section_number,teacher,period,room,max_size,when</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered">
                                         <thead>
                                             <tr>
-                                                <th>course_id</th>
+                                                <th>section_id</th>
+                                                <th>course</th>
                                                 <th>section_number</th>
                                                 <th>teacher</th>
                                                 <th>period</th>
@@ -410,31 +407,24 @@
                                         </thead>
                                         <tbody>
                                             <tr>
+                                                <td>S001</td>
                                                 <td>C001</td>
                                                 <td>1</td>
                                                 <td>T001</td>
                                                 <td>P001</td>
                                                 <td>R001</td>
-                                                <td>30</td>
+                                                <td>25</td>
                                                 <td>year</td>
                                             </tr>
                                             <tr>
-                                                <td>C001</td>
-                                                <td>2</td>
-                                                <td>T002</td>
-                                                <td>P003</td>
-                                                <td>R002</td>
-                                                <td>25</td>
-                                                <td>t1</td>
-                                            </tr>
-                                            <tr>
+                                                <td>S002</td>
                                                 <td>C002</td>
                                                 <td>1</td>
                                                 <td></td>
                                                 <td>P002</td>
-                                                <td>R003</td>
-                                                <td>28</td>
-                                                <td>q2</td>
+                                                <td></td>
+                                                <td></td>
+                                                <td>t1</td>
                                             </tr>
                                         </tbody>
                                     </table>

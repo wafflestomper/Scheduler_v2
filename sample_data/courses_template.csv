@@ -1,0 +1,11 @@
+course_id,name,course_type,teachers,grade_level,sections_needed,duration
+C001,Math 6,core,T001|T003,6,2,year
+C002,English 6,core,T002|T004,6,2,year
+C003,Science 6,core,T001|T003,6,2,year
+C004,Social Studies 6,core,T002|T004,6,1,year
+C005,Art,elective,T005,6,1,trimester
+C006,Music,elective,T005|T008,6,1,trimester
+C007,Drama,elective,T008,6,1,trimester
+C008,Robotics,elective,T007,6,1,trimester
+C009,Coding,elective,T007,6,1,trimester
+C010,Physical Education 6,required_elective,T006,6,2,year 

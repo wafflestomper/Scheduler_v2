@@ -69,9 +69,13 @@
                                             <td>{{ section.room }}</td>
                                             <td>{{ section.when }}</td>
                                             <td>
+                                                {% if course_id != 'unassigned' %}
                                                 <a href="{% url 'section_roster' course_id=course_id %}" class="btn btn-sm btn-info">
                                                     <i class="bi bi-people"></i> {{ section.students_count }}
                                                 </a>
+                                                {% else %}
+                                                <span class="badge bg-secondary">{{ section.students_count }}</span>
+                                                {% endif %}
                                             </td>
                                             <td>
                                                 {% if section.max_size != 'Unlimited' %}
@@ -87,12 +91,14 @@
                                                 {% endif %}
                                             </td>
                                             <td class="d-flex">
+                                                {% if section.id %}
                                                 <a href="{% url 'edit_section' section_id=section.id %}" class="btn btn-sm btn-warning me-1">
                                                     <i class="bi bi-pencil"></i> Edit
                                                 </a>
                                                 <a href="{% url 'delete_section' section_id=section.id %}" class="btn btn-sm btn-danger">
                                                     <i class="bi bi-trash"></i> Delete
                                                 </a>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% empty %}

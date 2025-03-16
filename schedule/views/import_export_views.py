@@ -72,6 +72,20 @@ class CSVUploadView(View):
                     
                     if 'created' in counts and 'updated' in counts:
                         messages.success(request, f'Successfully processed {data_type} data: {counts["created"]} created, {counts["updated"]} updated.')
+                        
+                        # Display any errors that occurred during processing
+                        if 'errors' in counts and counts['errors']:
+                            for error in counts['errors'][:10]:  # Limit to first 10 errors to avoid overwhelming the user
+                                messages.warning(request, error)
+                            
+                            if len(counts['errors']) > 10:
+                                messages.warning(request, f'... and {len(counts["errors"]) - 10} more errors. Check the console for details.')
+                                
+                            # Also print errors to console for debugging
+                            print(f"\nErrors during {data_type} processing:")
+                            for error in counts['errors']:
+                                print(f"  - {error}")
+                        
                     elif 'processed' in counts:
                         messages.success(request, f'Successfully processed {counts["processed"]} {data_type}.')
                     else:
@@ -101,11 +115,11 @@ class CSVUploadView(View):
         elif data_type == 'rooms':
             return ['name', 'capacity', 'room_type']
         elif data_type == 'courses':
-            return ['name', 'course_type', 'grade_level', 'capacity', 'sections_needed']
+            return ['course_id', 'name', 'course_type', 'teachers', 'grade_level', 'sections_needed', 'duration']
         elif data_type == 'periods':
             return ['name', 'start_time', 'end_time']
         elif data_type == 'sections':
-            return ['course_id', 'teacher_id', 'room_id', 'period_id']
+            return ['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
         return []
     
     def process_students(self, reader):
@@ -189,21 +203,25 @@ class CSVUploadView(View):
         for row in reader:
             if not any(row):  # Skip empty rows
                 continue
-                
-            name = row[0].strip()
-            course_type = row[1].strip()
-            grade_level = row[2].strip() if row[2].strip() else None
-            capacity = int(row[3].strip()) if row[3].strip() else 30
-            sections_needed = int(row[4].strip()) if len(row) > 4 and row[4].strip() else 1
+            
+            course_id = row[0].strip() if row[0].strip() else None
+            name = row[1].strip()
+            course_type = row[2].strip()
+            teachers = row[3].strip() if len(row) > 3 else ''
+            grade_level = int(row[4].strip()) if len(row) > 4 and row[4].strip() else 0
+            sections_needed = int(row[5].strip()) if len(row) > 5 and row[5].strip() else 1
+            duration = row[6].strip() if len(row) > 6 and row[6].strip() else 'year'
             
             # Check if course exists
             course, created_flag = Course.objects.update_or_create(
-                name=name,
+                id=course_id,
                 defaults={
-                    'course_type': course_type,
+                    'name': name,
+                    'type': course_type,
+                    'eligible_teachers': teachers,
                     'grade_level': grade_level,
-                    'capacity': capacity,
-                    'sections_needed': sections_needed
+                    'sections_needed': sections_needed,
+                    'duration': duration
                 }
             )
             
@@ -241,40 +259,120 @@ class CSVUploadView(View):
     def process_sections(self, reader):
         """Process sections data from CSV."""
         created, updated = 0, 0
-        for row in reader:
+        errors = []
+        
+        for row_index, row in enumerate(reader, start=1):
             if not any(row):  # Skip empty rows
                 continue
                 
-            course_id = int(row[0].strip()) if row[0].strip() else None
-            teacher_id = int(row[1].strip()) if row[1].strip() else None
-            room_id = int(row[2].strip()) if row[2].strip() else None
-            period_id = int(row[3].strip()) if row[3].strip() else None
+            section_id = row[0].strip() if row[0].strip() else None
+            course_id = row[1].strip() if len(row) > 1 and row[1].strip() else None
+            section_number = row[2].strip() if len(row) > 2 and row[2].strip() else '1'
+            teacher = row[3].strip() if len(row) > 3 and row[3].strip() else None
+            period = row[4].strip() if len(row) > 4 and row[4].strip() else None
+            room = row[5].strip() if len(row) > 5 and row[5].strip() else None
+            max_size = row[6].strip() if len(row) > 6 and row[6].strip() else None
+            when = row[7].strip() if len(row) > 7 and row[7].strip() else 'year'
+            
+            # Convert max_size to integer if provided
+            if max_size:
+                try:
+                    max_size = int(max_size)
+                except ValueError:
+                    errors.append(f"Row {row_index}: max_size must be a number, got '{max_size}'")
+                    max_size = None
             
             # Get related objects or None
-            course = Course.objects.get(pk=course_id) if course_id else None
-            teacher = Teacher.objects.get(pk=teacher_id) if teacher_id else None
-            room = Room.objects.get(pk=room_id) if room_id else None
-            period = Period.objects.get(pk=period_id) if period_id else None
-            
-            # We need at least a course to create a section
-            if not course:
+            try:
+                # Course is required
+                if not course_id:
+                    errors.append(f"Row {row_index}: Course ID is required")
+                    continue
+                    
+                try:
+                    course = Course.objects.get(pk=course_id)
+                except Course.DoesNotExist:
+                    errors.append(f"Row {row_index}: Course with ID '{course_id}' does not exist")
+                    continue
+                
+                # These are optional and can be None
+                teacher_obj = None
+                room_obj = None
+                
+                # Only try to get teacher or room if values were provided
+                if teacher:
+                    try:
+                        teacher_obj = Teacher.objects.get(pk=teacher)
+                    except Teacher.DoesNotExist:
+                        errors.append(f"Row {row_index}: Teacher with ID '{teacher}' does not exist")
+                
+                if room:
+                    try:
+                        room_obj = Room.objects.get(pk=room)
+                    except Room.DoesNotExist:
+                        errors.append(f"Row {row_index}: Room with ID '{room}' does not exist")
+                
+                # Period is required
+                try:
+                    period_obj = Period.objects.get(pk=period) if period else None
+                    if not period_obj:
+                        errors.append(f"Row {row_index}: Period is required")
+                        continue
+                except Period.DoesNotExist:
+                    errors.append(f"Row {row_index}: Period with ID '{period}' does not exist")
+                    continue
+                
+                # Create or update the section
+                try:
+                    section_number_int = int(section_number)
+                except ValueError:
+                    errors.append(f"Row {row_index}: section_number must be a number, got '{section_number}'")
+                    continue
+                
+                # Create or update the section
+                if section_id:
+                    # If section_id is provided, use it
+                    section, created_flag = Section.objects.update_or_create(
+                        id=section_id,
+                        defaults={
+                            'course': course,
+                            'section_number': section_number_int,
+                            'teacher': teacher_obj,
+                            'period': period_obj,
+                            'room': room_obj,
+                            'max_size': max_size,
+                            'when': when
+                        }
+                    )
+                else:
+                    # If no section_id provided, create one from course_id and section_number
+                    new_section_id = f"{course_id}-{section_number}"
+                    section, created_flag = Section.objects.update_or_create(
+                        id=new_section_id,
+                        defaults={
+                            'course': course,
+                            'section_number': section_number_int,
+                            'teacher': teacher_obj,
+                            'period': period_obj,
+                            'room': room_obj,
+                            'max_size': max_size,
+                            'when': when
+                        }
+                    )
+                
+                if created_flag:
+                    created += 1
+                else:
+                    updated += 1
+                    
+            except Exception as e:
+                errors.append(f"Row {row_index}: Unexpected error: {str(e)}")
                 continue
-            
-            # Create a unique identifier for this section
-            # If a section with these attributes already exists, we'll update it
-            section, created_flag = Section.objects.update_or_create(
-                course=course,
-                teacher=teacher,
-                room=room,
-                period=period
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
         
-        return {'created': created, 'updated': updated}
+        result = {'created': created, 'updated': updated}
+        if errors:
+            result['errors'] = errors
+        return result
 
 
 def download_template_csv(request, template_type):
@@ -300,9 +398,9 @@ def download_template_csv(request, template_type):
         writer.writerow(['Science Lab', '25', 'Lab'])
     
     elif template_type == 'courses':
-        writer.writerow(['name', 'course_type', 'grade_level', 'capacity', 'sections_needed'])
-        writer.writerow(['Algebra I', 'Math', '9', '30', '2'])
-        writer.writerow(['Biology', 'Science', '10', '25', '3'])
+        writer.writerow(['course_id', 'name', 'course_type', 'teachers', 'grade_level', 'sections_needed', 'duration'])
+        writer.writerow(['C001', 'Algebra I', 'core', 'T001|T002', '9', '2', 'year'])
+        writer.writerow(['C002', 'Biology', 'elective', 'T003', '10', '3', 'trimester'])
     
     elif template_type == 'periods':
         writer.writerow(['name', 'start_time', 'end_time'])
@@ -310,9 +408,9 @@ def download_template_csv(request, template_type):
         writer.writerow(['Period 2', '09:00', '09:50'])
     
     elif template_type == 'sections':
-        writer.writerow(['course_id', 'teacher_id', 'room_id', 'period_id'])
-        writer.writerow(['1', '1', '1', '1'])
-        writer.writerow(['2', '2', '2', '2'])
+        writer.writerow(['section_id', 'course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when'])
+        writer.writerow(['S001', 'C001', '1', 'T001', 'P001', 'R001', '25', 'year'])
+        writer.writerow(['S002', 'C002', '1', '', 'P002', '', '', 'trimester'])  # Example with optional fields blank
     
     else:
         return HttpResponse(f"Unknown template type: {template_type}", status=400)
