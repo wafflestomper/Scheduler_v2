@@ -12,6 +12,7 @@ from schedule.utils.section_registration_utils import (
 from schedule.utils.balance_assignment import perfect_balance_assignment
 from schedule.utils.language_course_utils import assign_language_courses, get_language_course_conflicts
 from schedule.utils.trimester_course_utils import assign_trimester_courses, get_trimester_course_conflicts
+from schedule.utils.language_core_algorithm import register_language_and_core_courses
 
 def registration_home(request):
     """
@@ -76,6 +77,14 @@ def section_registration(request):
                 course_id = data.get('course_id')  # Optional: assign for a specific course only
                 # Call the balancing algorithm
                 results = perfect_balance_assignment(course_id)
+                return JsonResponse(results)
+            
+            elif action == 'assign_language_core':
+                grade_level = data.get('grade_level', 6)  # Default to 6th grade
+                undo_depth = data.get('undo_depth', 3)    # Default undo depth
+                
+                # Call the new language-core algorithm
+                results = register_language_and_core_courses(grade_level, undo_depth)
                 return JsonResponse(results)
                 
             elif action == 'deregister_all_sections':

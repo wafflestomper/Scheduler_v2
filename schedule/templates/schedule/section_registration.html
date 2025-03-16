@@ -61,6 +61,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const runRegistrationBtn = document.getElementById('run-registration-btn');
     const runCourseRegistrationBtn = document.getElementById('run-course-registration-btn');
+    const runLanguageCoreBtn = document.getElementById('run-language-core-btn');
     const deregisterAllBtn = document.getElementById('deregister-all-btn');
     const courseSelect = document.getElementById('course-select');
     const courseRegisterBtns = document.querySelectorAll('.course-register-btn');
@@ -89,6 +90,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             assignSections();
+        });
+    }
+    
+    // Run the new language-core algorithm
+    if (runLanguageCoreBtn) {
+        runLanguageCoreBtn.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to run the new language & core course assignment algorithm for 6th grade students? This may take a moment.')) {
+                return;
+            }
+            
+            assignLanguageCore();
         });
     }
     
@@ -138,6 +150,104 @@ document.addEventListener('DOMContentLoaded', function() {
             assignSections(courseId);
         });
     });
+    
+    // Function to call the language-core assignment API
+    function assignLanguageCore() {
+        // Show loading state
+        document.body.style.cursor = 'wait';
+        
+        // Disable buttons
+        if (runLanguageCoreBtn) runLanguageCoreBtn.disabled = true;
+        
+        // Call the API
+        fetch('/api/section-registration/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                action: 'assign_language_core',
+                grade_level: 6,
+                undo_depth: 3
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (runLanguageCoreBtn) runLanguageCoreBtn.disabled = false;
+            
+            // Create results HTML based on the data structure from register_language_and_core_courses
+            let resultsHtml = `
+                <div class="alert ${data.status === 'success' ? 'alert-success' : data.status === 'partial' ? 'alert-warning' : 'alert-danger'}">
+                    ${data.message}
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="card ${data.language_success > 0 ? 'bg-success' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Language Course Success</h5>
+                                <p class="display-4">${data.language_success}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card ${data.language_failure > 0 ? 'bg-danger' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Language Course Failure</h5>
+                                <p class="display-4">${data.language_failure}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-md-6">
+                        <div class="card ${data.core_success > 0 ? 'bg-success' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Core Course Success</h5>
+                                <p class="display-4">${data.core_success}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card ${data.core_failure > 0 ? 'bg-danger' : 'bg-secondary'} text-white">
+                            <div class="card-body">
+                                <h5 class="card-title">Core Course Failure</h5>
+                                <p class="display-4">${data.core_failure}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultModalBody.innerHTML = resultsHtml;
+            resultModal.show();
+            
+            // Only auto-reload if successful
+            if (data.status === 'success') {
+                // Reload page after 2 seconds to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            // Reset cursor and buttons
+            document.body.style.cursor = 'default';
+            if (runLanguageCoreBtn) runLanguageCoreBtn.disabled = false;
+            
+            // Show error
+            resultModalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    An error occurred: ${error.message}
+                </div>
+            `;
+            resultModal.show();
+        });
+    }
     
     // Function to call the section assignment API
     function assignSections(courseId = null) {
