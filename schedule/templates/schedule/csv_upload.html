@@ -388,14 +388,13 @@
                                         <i class="bi bi-download"></i> Download Template
                                     </a>
                                 </div>
-                                <p><code>section_id,course,section_number,teacher,period,room,max_size,when</code></p>
+                                <p><code>course,section_number,teacher,period,room,max_size,when</code></p>
                                 
                                 <h6>Example Data:</h6>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered">
                                         <thead>
                                             <tr>
-                                                <th>section_id</th>
                                                 <th>course</th>
                                                 <th>section_number</th>
                                                 <th>teacher</th>
@@ -407,7 +406,6 @@
                                         </thead>
                                         <tbody>
                                             <tr>
-                                                <td>S001</td>
                                                 <td>C001</td>
                                                 <td>1</td>
                                                 <td>T001</td>
@@ -417,14 +415,13 @@
                                                 <td>year</td>
                                             </tr>
                                             <tr>
-                                                <td>S002</td>
                                                 <td>C002</td>
                                                 <td>1</td>
                                                 <td></td>
                                                 <td>P002</td>
                                                 <td></td>
                                                 <td></td>
-                                                <td>t1</td>
+                                                <td>trimester</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -454,12 +451,12 @@
     </div>
     <div class="card-body">
         <p>Upload a CSV file with the following headers:</p>
-        <p><strong>Required fields:</strong> course_id, section_number, period</p>
+        <p><strong>Required fields:</strong> course, section_number, period</p>
         <p><strong>Optional fields:</strong> teacher, room, max_size, when</p>
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>course_id</th>
+                    <th>course</th>
                     <th>section_number</th>
                     <th>teacher</th>
                     <th>period</th>
@@ -476,7 +473,7 @@
                     <td>P001</td>
                     <td>R001</td>
                     <td>25</td>
-                    <td>q1</td>
+                    <td>year</td>
                 </tr>
                 <tr>
                     <td>C002</td>
@@ -485,7 +482,7 @@
                     <td>P002</td>
                     <td></td>
                     <td></td>
-                    <td>q2</td>
+                    <td>trimester</td>
                 </tr>
             </tbody>
         </table>
