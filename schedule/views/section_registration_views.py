@@ -14,6 +14,7 @@ from schedule.utils.language_course_utils import assign_language_courses, get_la
 from schedule.utils.trimester_course_utils import assign_trimester_courses, get_trimester_course_conflicts
 from schedule.utils.language_core_algorithm import register_language_and_core_courses
 from schedule.utils.art_music_ww_algorithm import register_art_music_ww_courses
+from schedule.utils.two_group_elective_algorithm import register_two_elective_groups
 
 def registration_home(request):
     """
@@ -94,6 +95,14 @@ def section_registration(request):
                 
                 # Call the art-music-ww algorithm
                 results = register_art_music_ww_courses(grade_level, undo_depth)
+                return JsonResponse(results)
+                
+            elif action == 'assign_two_elective_groups':
+                grade_level = data.get('grade_level', 6)  # Default to 6th grade
+                undo_depth = data.get('undo_depth', 3)    # Default undo depth
+                
+                # Call the two-group elective algorithm
+                results = register_two_elective_groups(grade_level, undo_depth)
                 return JsonResponse(results)
                 
             elif action == 'deregister_all_sections':
