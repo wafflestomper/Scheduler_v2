@@ -1,9 +1,10 @@
 from django.db.models import Count
 from schedule.models import Student, Course, TrimesterCourseGroup, Period, Section, Enrollment, CourseEnrollment
+import random
 
 def assign_trimester_courses(student, group_ids=None, preferred_period=None):
     """
-    Assigns a student to trimester course sections based on constraints:
+    Assigns a student to trimester course sections using backtracking algorithm:
     - One course from each group (WH6/HW6, CTA6/TAC6, WW6/Art6/Mus6)
     - Each course in a different trimester
     - All courses in the same period
@@ -19,7 +20,7 @@ def assign_trimester_courses(student, group_ids=None, preferred_period=None):
             - message: Status message
             - assignments: List of created Enrollment objects
     """
-    # Get the trimester course groups for 6th grade if none provided
+    # Get the trimester course groups if none provided
     if group_ids:
         trimester_groups = TrimesterCourseGroup.objects.filter(id__in=group_ids)
     else:
@@ -49,119 +50,16 @@ def assign_trimester_courses(student, group_ids=None, preferred_period=None):
         section__course__in=all_courses
     ).select_related('section', 'section__course', 'section__period')
     
+    # If student already has assignments, handle them
+    if existing_assignments.exists():
+        return handle_existing_assignments(student, existing_assignments, trimester_groups)
+    
     # Get all available sections for these courses
     course_sections = Section.objects.filter(
         course__in=all_courses
     ).select_related('course', 'period')
     
-    # Organize sections by period and trimester
-    sections_by_period_trimester = {}
-    for section in course_sections:
-        period_id = section.period_id
-        trimester = section.when
-        
-        if period_id not in sections_by_period_trimester:
-            sections_by_period_trimester[period_id] = {}
-        
-        if trimester not in sections_by_period_trimester[period_id]:
-            sections_by_period_trimester[period_id][trimester] = {}
-        
-        sections_by_period_trimester[period_id][trimester][section.course_id] = {
-            'section': section,
-            'current_enrollment': section.students.count(),
-            'max_capacity': section.course.max_students
-        }
-    
-    # Create lists to track assignments
-    new_assignments = []
-    
-    # If student already has assignments
-    if existing_assignments.exists():
-        existing_period = None
-        assigned_trimesters = {}
-        assigned_courses = {}
-        assigned_groups = {}
-        
-        for enrollment in existing_assignments:
-            section = enrollment.section
-            course_id = section.course_id
-            trimester = section.when
-            period_id = section.period_id
-            
-            # Find which group this course belongs to
-            for group in trimester_groups:
-                if group.courses.filter(id=course_id).exists():
-                    assigned_groups[group.id] = course_id
-                    break
-            
-            assigned_courses[course_id] = {
-                'section': section,
-                'trimester': trimester,
-                'period': period_id
-            }
-            
-            if existing_period is None:
-                existing_period = period_id
-            elif existing_period != period_id:
-                return (False, f"Student has trimester courses in different periods", new_assignments)
-            
-            assigned_trimesters[trimester] = course_id
-        
-        # Complete missing assignments if possible
-        if existing_period in sections_by_period_trimester:
-            # Identify missing group assignments
-            missing_groups = []
-            for group in trimester_groups:
-                if group.id not in assigned_groups:
-                    missing_groups.append(group)
-            
-            available_trimesters = set(['t1', 't2', 't3']) - set(assigned_trimesters.keys())
-            
-            if len(missing_groups) == len(available_trimesters):
-                # We can complete the assignment
-                for group in missing_groups:
-                    # Get the student's enrolled course for this group
-                    enrolled_course = CourseEnrollment.objects.filter(
-                        student=student,
-                        course__in=group.courses.all()
-                    ).first()
-                    
-                    if not enrolled_course:
-                        continue
-                    
-                    course_id = enrolled_course.course.id
-                    
-                    # Find a section in an available trimester
-                    for trimester in available_trimesters:
-                        if (trimester in sections_by_period_trimester[existing_period] and 
-                            course_id in sections_by_period_trimester[existing_period][trimester]):
-                            section_data = sections_by_period_trimester[existing_period][trimester][course_id]
-                            
-                            if section_data['current_enrollment'] < section_data['max_capacity']:
-                                # Create enrollment
-                                enrollment = Enrollment.objects.create(
-                                    student=student,
-                                    section=section_data['section']
-                                )
-                                new_assignments.append(enrollment)
-                                
-                                # Mark this trimester as used
-                                available_trimesters.remove(trimester)
-                                break
-                
-                if len(new_assignments) == len(missing_groups):
-                    return (True, "Completed partial assignments", new_assignments)
-                else:
-                    return (False, "Could not complete all assignments", new_assignments)
-            else:
-                return (False, "Mismatched missing groups and trimesters", new_assignments)
-        else:
-            return (False, "Existing period does not have required sections", new_assignments)
-    
-    # New assignment - find the best period
-    valid_period_assignments = []
-    
-    # Gather student's enrolled courses for each group
+    # Get the student's enrolled courses for each group
     student_courses = []
     for group in trimester_groups:
         enrolled_course = CourseEnrollment.objects.filter(
@@ -172,96 +70,322 @@ def assign_trimester_courses(student, group_ids=None, preferred_period=None):
         if enrolled_course:
             student_courses.append(enrolled_course.course)
     
-    # Calculate which periods have all required courses across different trimesters
-    for period_id, trimesters in sections_by_period_trimester.items():
-        # Check if all student's courses can be scheduled in this period
-        all_courses_covered = True
-        for course in student_courses:
-            course_found = False
-            for trimester, courses in trimesters.items():
-                if course.id in courses:
-                    course_found = True
-                    break
-            
-            if not course_found:
-                all_courses_covered = False
-                break
+    # Organize sections by period, trimester, and course
+    # This will be our constraint model for backtracking
+    sections_by_period = {}
+    
+    # First, gather all sections and organize them
+    for section in course_sections:
+        if section.period_id not in sections_by_period:
+            sections_by_period[section.period_id] = {
+                'period': section.period,
+                'trimesters': {'t1': {}, 't2': {}, 't3': {}}
+            }
         
-        if all_courses_covered:
-            valid_period_assignments.append(period_id)
-    
-    # Prioritize the preferred period if it's valid
-    if preferred_period and preferred_period.id in valid_period_assignments:
-        best_period = preferred_period.id
-    else:
-        # Find period with lowest maximum enrollment
-        best_period = None
-        lowest_max_enrollment = float('inf')
+        period_data = sections_by_period[section.period_id]
+        trimester = section.when
         
-        for period_id in valid_period_assignments:
-            # Calculate maximum enrollment across all sections for this period
-            max_enrollment = 0
-            valid_assignment = True
+        # Skip if this course isn't one of the student's enrolled courses
+        student_course_ids = [c.id for c in student_courses]
+        if section.course_id not in student_course_ids:
+            continue
             
-            for course in student_courses:
-                course_found = False
-                for trimester in ['t1', 't2', 't3']:
-                    if (trimester in sections_by_period_trimester[period_id] and 
-                        course.id in sections_by_period_trimester[period_id][trimester]):
-                        section_data = sections_by_period_trimester[period_id][trimester][course.id]
-                        if section_data['current_enrollment'] < section_data['max_capacity']:
-                            course_found = True
-                        max_enrollment = max(max_enrollment, section_data['current_enrollment'])
-                
-                if not course_found:
-                    valid_assignment = False
-            
-            if valid_assignment and max_enrollment < lowest_max_enrollment:
-                best_period = period_id
-                lowest_max_enrollment = max_enrollment
+        # Add section to this period/trimester
+        if section.course_id not in period_data['trimesters'][trimester]:
+            period_data['trimesters'][trimester][section.course_id] = {
+                'section': section,
+                'enrollment': section.students.count(),
+                'max_size': section.max_size
+            }
     
-    if best_period is None:
-        return (False, "No period has available sections for all required courses", new_assignments)
+    # Prioritize the preferred period if specified
+    period_ids = list(sections_by_period.keys())
+    if preferred_period and preferred_period.id in period_ids:
+        # Move preferred period to front of list
+        period_ids.remove(preferred_period.id)
+        period_ids.insert(0, preferred_period.id)
     
-    # Assign student to each course in a different trimester
-    # Sort sections by enrollment to balance sections
-    sorted_course_assignments = []
+    # Sort student courses by restrictiveness (sections with fewer spots first)
+    restrictiveness = {}
     for course in student_courses:
-        for trimester in ['t1', 't2', 't3']:
-            if (trimester in sections_by_period_trimester[best_period] and 
-                course.id in sections_by_period_trimester[best_period][trimester]):
-                section_data = sections_by_period_trimester[best_period][trimester][course.id]
-                sorted_course_assignments.append((course.id, trimester, section_data))
+        course_sections = Section.objects.filter(course=course)
+        total_capacity = sum(s.max_size or 100 for s in course_sections)
+        restrictiveness[course.id] = total_capacity
     
-    # Sort by enrollment (lowest first)
-    sorted_course_assignments.sort(key=lambda x: x[2]['current_enrollment'])
+    sorted_student_courses = sorted(student_courses, key=lambda c: restrictiveness.get(c.id, float('inf')))
     
-    # Assign courses to trimesters
-    assigned_trimesters = set()
-    assigned_courses = set()
+    # Now try to find a valid assignment using backtracking
+    assignments = []
+    solution = backtrack_assign_courses(student, sorted_student_courses, sections_by_period, period_ids)
     
-    for course_id, trimester, section_data in sorted_course_assignments:
-        if (course_id not in assigned_courses and 
-            trimester not in assigned_trimesters and 
-            section_data['current_enrollment'] < section_data['max_capacity']):
-            
-            # Create enrollment
+    if solution:
+        # Create the enrollments
+        for trimester, section in solution.items():
             enrollment = Enrollment.objects.create(
                 student=student,
-                section=section_data['section']
+                section=section
             )
-            new_assignments.append(enrollment)
-            
-            assigned_trimesters.add(trimester)
-            assigned_courses.add(course_id)
-    
-    if len(assigned_courses) == len(student_courses):
-        return (True, "Successfully assigned all trimester courses", new_assignments)
+            assignments.append(enrollment)
+        
+        return (True, "Successfully assigned all courses", assignments)
     else:
-        # Clean up partial assignments
+        # Try a different approach: find sections with available space one by one
+        success, assignments = assign_courses_greedily(student, student_courses, sections_by_period, period_ids)
+        if success:
+            return (True, "Successfully assigned courses using greedy approach", assignments)
+        else:
+            return (False, "Failed to find valid assignment after trying all approaches", [])
+
+
+def backtrack_assign_courses(student, courses, sections_by_period, period_ids):
+    """
+    Uses backtracking to find a valid assignment of courses to trimesters within a period.
+    
+    Args:
+        student: The Student object to assign
+        courses: List of Course objects to assign, sorted by restrictiveness
+        sections_by_period: Dict of period data with available sections
+        period_ids: List of period IDs to try, in priority order
+    
+    Returns:
+        dict: Map of trimester -> section if successful, None otherwise
+    """
+    # Try each period in order
+    for period_id in period_ids:
+        # Check if this period has sections for all required courses
+        period_data = sections_by_period[period_id]
+        
+        # Attempt to assign courses within this period
+        assignment = backtrack_helper(student, courses, period_data, {})
+        if assignment:
+            return assignment
+    
+    return None
+
+
+def backtrack_helper(student, remaining_courses, period_data, current_assignment):
+    """
+    Recursive helper for backtracking algorithm.
+    
+    Args:
+        student: The Student object to assign
+        remaining_courses: List of remaining Course objects to assign
+        period_data: Dict with period and trimester section data
+        current_assignment: Dict mapping trimester -> section for courses already assigned
+    
+    Returns:
+        dict: Updated assignment if successful, None otherwise
+    """
+    # Base case: all courses assigned
+    if not remaining_courses:
+        return current_assignment
+    
+    # Get the next course to assign (most restrictive first)
+    current_course = remaining_courses[0]
+    next_courses = remaining_courses[1:]
+    
+    # Get available trimesters (those not already assigned)
+    assigned_trimesters = set(current_assignment.keys())
+    available_trimesters = [t for t in ['t1', 't2', 't3'] if t not in assigned_trimesters]
+    
+    # Try each available trimester for this course
+    for trimester in available_trimesters:
+        # Check if this course has a section in this trimester for this period
+        if current_course.id in period_data['trimesters'][trimester]:
+            section_data = period_data['trimesters'][trimester][current_course.id]
+            section = section_data['section']
+            
+            # Check if section has space
+            if section_data['max_size'] is None or section_data['enrollment'] < section_data['max_size']:
+                # Try this assignment
+                new_assignment = current_assignment.copy()
+                new_assignment[trimester] = section
+                
+                # Recursively assign remaining courses
+                result = backtrack_helper(student, next_courses, period_data, new_assignment)
+                if result:
+                    return result
+    
+    # If we get here, no valid assignment was found
+    return None
+
+
+def assign_courses_greedily(student, courses, sections_by_period, period_ids):
+    """
+    Fallback greedy algorithm that tries to find any working assignment,
+    even if it means assigning to different periods.
+    
+    Returns:
+        tuple: (success, assignments)
+    """
+    # Try to find any sections with space for each course
+    assignments = []
+    assigned_trimesters = set()
+    
+    # Randomize course order for multiple attempts
+    for attempt in range(3):  # Try 3 times with different orderings
+        assignments = []
+        assigned_trimesters = set()
+        shuffled_courses = list(courses)
+        random.shuffle(shuffled_courses)
+        
+        for course in shuffled_courses:
+            # Find any section for this course that doesn't conflict
+            section_found = False
+            
+            # Try all periods (in priority order)
+            for period_id in period_ids:
+                if section_found:
+                    break
+                    
+                period_data = sections_by_period[period_id]
+                
+                # Try each trimester not already assigned
+                for trimester in ['t1', 't2', 't3']:
+                    if trimester in assigned_trimesters:
+                        continue
+                        
+                    if course.id in period_data['trimesters'][trimester]:
+                        section_data = period_data['trimesters'][trimester][course.id]
+                        
+                        # Check if section has space
+                        if section_data['max_size'] is None or section_data['enrollment'] < section_data['max_size']:
+                            # Create enrollment
+                            enrollment = Enrollment.objects.create(
+                                student=student,
+                                section=section_data['section']
+                            )
+                            assignments.append(enrollment)
+                            assigned_trimesters.add(trimester)
+                            section_found = True
+                            break
+            
+            if not section_found:
+                # If we failed to assign this course, undo enrollments and try again
+                for enrollment in assignments:
+                    enrollment.delete()
+                assignments = []
+                assigned_trimesters = set()
+                break
+        
+        # If we successfully assigned all courses, return success
+        if len(assignments) == len(courses):
+            return True, assignments
+    
+    # If we get here, we couldn't assign all courses
+    return False, []
+
+
+def handle_existing_assignments(student, existing_assignments, trimester_groups):
+    """
+    Handle case where student already has some trimester course assignments.
+    Try to complete the assignments if possible.
+    """
+    existing_period = None
+    assigned_trimesters = {}
+    assigned_courses = {}
+    assigned_groups = {}
+    new_assignments = []
+    
+    for enrollment in existing_assignments:
+        section = enrollment.section
+        course_id = section.course_id
+        trimester = section.when
+        period_id = section.period_id
+        
+        # Find which group this course belongs to
+        for group in trimester_groups:
+            if group.courses.filter(id=course_id).exists():
+                assigned_groups[group.id] = course_id
+                break
+        
+        assigned_courses[course_id] = {
+            'section': section,
+            'trimester': trimester,
+            'period': period_id
+        }
+        
+        if existing_period is None:
+            existing_period = period_id
+        elif existing_period != period_id:
+            return (False, f"Student has trimester courses in different periods", new_assignments)
+        
+        assigned_trimesters[trimester] = course_id
+    
+    # Identify missing group assignments
+    missing_groups = []
+    for group in trimester_groups:
+        if group.id not in assigned_groups:
+            missing_groups.append(group)
+    
+    available_trimesters = set(['t1', 't2', 't3']) - set(assigned_trimesters.keys())
+    
+    if len(missing_groups) != len(available_trimesters):
+        return (False, "Mismatched missing groups and trimesters", new_assignments)
+    
+    # Get all sections for the missing groups in the existing period
+    course_sections = Section.objects.filter(
+        course__course_groups__in=missing_groups,
+        period_id=existing_period
+    ).select_related('course')
+    
+    # Organize by trimester and course
+    sections_by_trimester_course = {}
+    for section in course_sections:
+        trimester = section.when
+        if trimester not in sections_by_trimester_course:
+            sections_by_trimester_course[trimester] = {}
+        
+        sections_by_trimester_course[trimester][section.course_id] = {
+            'section': section,
+            'enrollment': section.students.count(),
+            'max_size': section.max_size
+        }
+    
+    # Get student's enrolled courses for each missing group
+    student_courses = []
+    for group in missing_groups:
+        enrolled_course = CourseEnrollment.objects.filter(
+            student=student,
+            course__in=group.courses.all()
+        ).first()
+        
+        if enrolled_course:
+            student_courses.append(enrolled_course.course)
+    
+    # Try to assign each missing course to an available trimester
+    successful = True
+    
+    for course in student_courses:
+        course_assigned = False
+        for trimester in available_trimesters:
+            if trimester in sections_by_trimester_course and course.id in sections_by_trimester_course[trimester]:
+                section_data = sections_by_trimester_course[trimester][course.id]
+                
+                # Check if section has space
+                if section_data['max_size'] is None or section_data['enrollment'] < section_data['max_size']:
+                    # Create enrollment
+                    enrollment = Enrollment.objects.create(
+                        student=student,
+                        section=section_data['section']
+                    )
+                    new_assignments.append(enrollment)
+                    available_trimesters.remove(trimester)
+                    course_assigned = True
+                    break
+        
+        if not course_assigned:
+            successful = False
+            break
+    
+    if successful:
+        return (True, "Completed partial assignments", new_assignments)
+    else:
+        # Clean up any partial assignments we created
         for enrollment in new_assignments:
             enrollment.delete()
-        return (False, "Could not assign all required trimester courses", [])
+        
+        return (False, "Could not complete all assignments", [])
 
 
 def get_trimester_course_conflicts(student, group_ids=None):
