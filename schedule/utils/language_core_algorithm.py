@@ -3,7 +3,7 @@ Flexible algorithm for registering students into core and language classes.
 This module implements an algorithm that prioritizes equal distribution across sections.
 """
 from django.db import transaction
-from schedule.models import Student, Course, Section, Enrollment
+from schedule.models import Student, Course, Section, Enrollment, CourseEnrollment
 import logging
 
 # Set up logging
@@ -177,16 +177,16 @@ def register_language_and_core_courses(grade_level, undo_depth=3):
             'core_failure': 0
         }
     
-    # Get language courses for this grade level
+    # Get language courses for this grade level - update type to match database
     language_courses = Course.objects.filter(
-        type='language',
+        type='Language',  # Changed from 'language' to 'Language'
         grade_level=grade_level
     )
     print(f"DEBUG: Found {language_courses.count()} language courses for grade {grade_level}")
     
-    # Get core courses for this grade level
+    # Get core courses for this grade level - update type to match database
     core_courses = Course.objects.filter(
-        type='core',
+        type='CORE',  # Changed from 'core' to 'CORE'
         grade_level=grade_level
     )
     print(f"DEBUG: Found {core_courses.count()} core courses for grade {grade_level}")
@@ -236,7 +236,6 @@ def register_language_and_core_courses(grade_level, undo_depth=3):
         student_course_enrollments[student.id] = set()
         
     # Get existing course enrollments
-    from schedule.models import CourseEnrollment
     existing_enrollments = CourseEnrollment.objects.filter(
         student__in=students,
         course__id__in=course_ids
@@ -278,13 +277,13 @@ def register_language_and_core_courses(grade_level, undo_depth=3):
         language_success = 0
         core_success = 0
         
-        # Get unique students with language course assignments
+        # Get unique students with language course assignments - update type to match database
         language_students = set(Enrollment.objects.filter(
             section__course__in=language_courses,
             student__in=students
         ).values_list('student_id', flat=True))
         
-        # Get unique students with core course assignments
+        # Get unique students with core course assignments - update type to match database
         core_students = set(Enrollment.objects.filter(
             section__course__in=core_courses,
             student__in=students
