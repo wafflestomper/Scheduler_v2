@@ -43,14 +43,16 @@ def register_students_to_sections(students, course_sections, undo_depth=3, max_i
         print(f"DEBUG: Processing course {course_id} with {len(sections)} sections")
         for section in sections:
             current_enrollment = Enrollment.objects.filter(section=section).count()
+            # Use default max_size of 25 if not set
+            max_size = section.max_size if section.max_size is not None else 25
             section_data[course_id].append({
                 'section': section,
                 'current_enrollment': current_enrollment,
-                'max_capacity': section.course.max_students,
-                'open_seats': section.course.max_students - current_enrollment,
-                'total_seats': section.course.max_students
+                'max_capacity': max_size,
+                'open_seats': max_size - current_enrollment,
+                'total_seats': max_size
             })
-            print(f"DEBUG: Section {section.id} has {current_enrollment}/{section.course.max_students} students")
+            print(f"DEBUG: Section {section.id} has {current_enrollment}/{max_size} students")
     
     # Track assignments for potential backtracking
     assignments = []
