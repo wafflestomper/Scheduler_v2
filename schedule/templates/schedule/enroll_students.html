@@ -71,19 +71,17 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Enrollment Status</h5>
-                    {% if selected_course_ids %}
                     <div class="btn-group">
-                        <button id="batch-enroll-btn" class="btn btn-sm btn-success">
+                        <button id="batch-enroll-btn" class="btn btn-sm btn-success" {% if not selected_course_ids and not grade_filter %}disabled{% endif %}>
                             <i class="bi bi-people-fill"></i> Enroll All Filtered Students
                         </button>
-                        <button id="batch-disenroll-btn" class="btn btn-sm btn-danger">
+                        <button id="batch-disenroll-btn" class="btn btn-sm btn-danger" {% if not selected_course_ids and not grade_filter %}disabled{% endif %}>
                             <i class="bi bi-people-x-fill"></i> Disenroll All Students
                         </button>
                         <button id="clear-enrollments-btn" class="btn btn-sm btn-warning">
                             <i class="bi bi-trash"></i> Clear All Section Enrollments
                         </button>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="row mb-4">
@@ -349,16 +347,28 @@ document.addEventListener('DOMContentLoaded', function() {
         batchEnrollBtn.addEventListener('click', function() {
             const studentCheckboxes = document.querySelectorAll('.student-checkbox:checked:not(:disabled)');
             const urlParams = new URLSearchParams(window.location.search);
-            const courseIds = urlParams.getAll('course_id');
+            let courseIds = urlParams.getAll('course_id');
+            const gradeFilter = urlParams.get('grade');
             
             if (!studentCheckboxes.length) {
                 showResponse('error', 'No students selected for enrollment.');
                 return;
             }
             
+            // For "All Courses" case, we need to gather all course IDs
             if (!courseIds.length) {
-                showResponse('error', 'No courses selected for enrollment.');
-                return;
+                if (!gradeFilter) {
+                    showResponse('error', 'Please select a grade level or specific courses for enrollment.');
+                    return;
+                }
+                
+                // When "All Courses" is checked, we need to use all available course IDs
+                courseIds = Array.from(courseCheckboxes).map(cb => cb.value);
+                
+                if (!courseIds.length) {
+                    showResponse('error', 'No courses available for the selected grade level.');
+                    return;
+                }
             }
             
             const studentIds = Array.from(studentCheckboxes).map(cb => cb.value);
@@ -377,22 +387,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (batchDisenrollBtn) {
         batchDisenrollBtn.addEventListener('click', function() {
             const urlParams = new URLSearchParams(window.location.search);
-            const courseIds = urlParams.getAll('course_id');
+            let courseIds = urlParams.getAll('course_id');
+            const gradeFilter = urlParams.get('grade');
             
+            // For "All Courses" case, we need to gather all course IDs
             if (!courseIds.length) {
-                showResponse('error', 'No courses selected for disenrollment.');
-                return;
+                if (!gradeFilter) {
+                    showResponse('error', 'Please select a grade level or specific courses for disenrollment.');
+                    return;
+                }
+                
+                // When "All Courses" is checked, we need to use all available course IDs
+                courseIds = Array.from(courseCheckboxes).map(cb => cb.value);
+                
+                if (!courseIds.length) {
+                    showResponse('error', 'No courses available for the selected grade level.');
+                    return;
+                }
             }
             
             // Confirm before proceeding
-            if (!confirm('Are you sure you want to disenroll ALL students from the selected courses?')) {
+            if (!confirm('Are you sure you want to disenroll ALL students from the selected courses? This will affect ' + courseIds.length + ' courses.')) {
                 return;
             }
             
             // Get all enrolled students by finding the disabled checkboxes (which are checked)
-            const enrolledStudentIds = Array.from(
-                document.querySelectorAll('.student-checkbox:disabled')
-            ).map(cb => cb.value);
+            // For "All Courses", we need to get all students instead
+            let enrolledStudentIds = [];
+            
+            if (courseIds.length === courseCheckboxes.length && allCoursesCheckbox.checked) {
+                // If "All Courses" is selected, include all students of the current grade
+                enrolledStudentIds = Array.from(
+                    document.querySelectorAll('.student-checkbox')
+                ).map(cb => cb.value);
+            } else {
+                // Otherwise, just get the specifically enrolled students
+                enrolledStudentIds = Array.from(
+                    document.querySelectorAll('.student-checkbox:disabled')
+                ).map(cb => cb.value);
+            }
             
             if (!enrolledStudentIds.length) {
                 showResponse('info', 'No students are currently enrolled in these courses.');
