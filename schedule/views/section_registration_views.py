@@ -82,7 +82,15 @@ def section_registration(request):
             if action == 'assign_sections':
                 course_id = data.get('course_id')  # Optional: assign for a specific course only
                 # Call the balancing algorithm
-                results = perfect_balance_assignment(course_id)
+                success, message, assignments = perfect_balance_assignment(course_id)
+                
+                # Create a properly formatted response
+                results = {
+                    'status': 'error' if not success else 'success',
+                    'message': message,
+                    'success_count': 0,
+                    'failure_count': 0
+                }
                 return JsonResponse(results)
             
             elif action == 'assign_language_core':
@@ -90,7 +98,17 @@ def section_registration(request):
                 undo_depth = data.get('undo_depth', 3)    # Default undo depth
                 
                 # Call the new language-core algorithm
-                results = register_language_and_core_courses(grade_level, undo_depth)
+                success, message, assignments = register_language_and_core_courses(grade_level, undo_depth)
+                
+                # Create a properly formatted response
+                results = {
+                    'status': 'error' if not success else 'success',
+                    'message': message,
+                    'language_success': 0,
+                    'language_failure': 0,
+                    'core_success': 0,
+                    'core_failure': 0,
+                }
                 return JsonResponse(results)
                 
             elif action == 'assign_art_music_ww':
@@ -98,7 +116,15 @@ def section_registration(request):
                 undo_depth = data.get('undo_depth', 3)    # Default undo depth
                 
                 # Call the art-music-ww algorithm
-                results = register_art_music_ww_courses(grade_level, undo_depth)
+                success, message, assignments = register_art_music_ww_courses(grade_level, undo_depth)
+                
+                # Create a properly formatted response
+                results = {
+                    'status': 'error' if not success else 'success',
+                    'message': message,
+                    'success_count': 0,
+                    'failure_count': 0
+                }
                 return JsonResponse(results)
                 
             elif action == 'assign_two_elective_groups':
@@ -106,7 +132,17 @@ def section_registration(request):
                 undo_depth = data.get('undo_depth', 3)    # Default undo depth
                 
                 # Call the two-group elective algorithm
-                results = register_two_elective_groups(grade_level, undo_depth)
+                success, message, assignments = register_two_elective_groups(grade_level, undo_depth)
+                
+                # Create a properly formatted response
+                results = {
+                    'status': 'error' if not success else 'success',
+                    'message': message,
+                    'first_group_success': 0,
+                    'first_group_failure': 0,
+                    'second_group_success': 0,
+                    'second_group_failure': 0
+                }
                 return JsonResponse(results)
                 
             elif action == 'assign_three_elective_groups':
@@ -114,7 +150,19 @@ def section_registration(request):
                 undo_depth = data.get('undo_depth', 3)    # Default undo depth
                 
                 # Call the three-group elective algorithm
-                results = register_three_elective_groups(grade_level, undo_depth)
+                success, message, assignments = register_three_elective_groups(grade_level, undo_depth)
+                
+                # Create a properly formatted response
+                results = {
+                    'status': 'error' if not success else 'success',
+                    'message': message,
+                    'first_group_success': 0,
+                    'first_group_failure': 0,
+                    'second_group_success': 0,
+                    'second_group_failure': 0,
+                    'third_group_success': 0,
+                    'third_group_failure': 0
+                }
                 return JsonResponse(results)
                 
             elif action == 'deregister_all_sections':
