@@ -33,7 +33,7 @@
                         <li><strong>Name:</strong> {{ period.period_name|default:"(No name)" }}</li>
                         <li><strong>Days:</strong> {{ period.get_days_display }}</li>
                         <li><strong>Period ID:</strong> {{ period.slot }}</li>
-                        <li><strong>Time:</strong> {{ period.start_time|time:"H:i" }} - {{ period.end_time|time:"H:i" }}</li>
+                        <li><strong>Time:</strong> {{ period.start_time|time:"g:i A" }} - {{ period.end_time|time:"g:i A" }}</li>
                     </ul>
                     <p>This action cannot be undone. Are you sure you want to proceed?</p>
                 </div>

@@ -52,7 +52,7 @@
                             <td>{{ period.period_name|default:"-" }}</td>
                             <td>{{ period.get_days_display }}</td>
                             <td>{{ period.slot }}</td>
-                            <td>{{ period.start_time|time:"H:i" }} - {{ period.end_time|time:"H:i" }}</td>
+                            <td>{{ period.start_time|time:"g:i A" }} - {{ period.end_time|time:"g:i A" }}</td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'edit_period' period.id %}" class="btn btn-primary btn-sm">
