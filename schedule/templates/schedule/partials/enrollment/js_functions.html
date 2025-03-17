@@ -1,0 +1,652 @@
+<!-- JavaScript functions for enrollment functionality -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get form and UI elements
+        const gradeSelect = document.getElementById('grade');
+        const filterForm = document.getElementById('filter-form');
+        const allCoursesCheckbox = document.getElementById('all-courses');
+        const courseCheckboxes = document.querySelectorAll('.course-checkbox');
+        const selectAllCheckbox = document.getElementById('select-all');
+        const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+        const enrollButtons = document.querySelectorAll('.enroll-btn');
+        const unenrollButtons = document.querySelectorAll('.unenroll-btn');
+        const batchEnrollBtn = document.getElementById('batch-enroll-btn');
+        const batchDisenrollBtn = document.getElementById('batch-disenroll-btn');
+        
+        // Create modal for displaying responses
+        const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+        const responseModalBody = document.getElementById('responseModalBody');
+        
+        // Auto-submit form when grade selection changes
+        if (gradeSelect) {
+            gradeSelect.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        }
+        
+        // Handle the "All Courses" checkbox
+        if (allCoursesCheckbox) {
+            allCoursesCheckbox.addEventListener('change', function() {
+                courseCheckboxes.forEach(checkbox => {
+                    checkbox.checked = !this.checked;
+                    checkbox.disabled = this.checked;
+                });
+            });
+        }
+        
+        // Handle individual course checkboxes
+        courseCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
+                if (allCoursesCheckbox) {
+                    allCoursesCheckbox.checked = !allChecked && courseCheckboxes.length > 0;
+                }
+            });
+        });
+        
+        // Set initial state of "All Courses" checkbox
+        if (courseCheckboxes.length > 0 && allCoursesCheckbox) {
+            const anyChecked = Array.from(courseCheckboxes).some(cb => cb.checked);
+            allCoursesCheckbox.checked = !anyChecked;
+            
+            // Disable course checkboxes if "All Courses" is checked
+            if (allCoursesCheckbox.checked) {
+                courseCheckboxes.forEach(cb => {
+                    cb.disabled = true;
+                });
+            }
+        }
+        
+        // Auto-check all eligible checkboxes on page load if courses are selected
+        if (window.location.search.includes('course_id=')) {
+            setTimeout(() => {
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = true;
+                    // Trigger the change event to check all student checkboxes
+                    selectAllCheckbox.dispatchEvent(new Event('change'));
+                }
+            }, 100);
+        }
+        
+        // Handle "Select All" checkbox for students
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                studentCheckboxes.forEach(checkbox => {
+                    if (!checkbox.disabled) {
+                        checkbox.checked = this.checked;
+                    }
+                });
+            });
+        }
+        
+        // Handle individual student checkboxes
+        studentCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                if (selectAllCheckbox) {
+                    const allEnabledChecked = Array.from(studentCheckboxes)
+                        .filter(cb => !cb.disabled)
+                        .every(cb => cb.checked);
+                    selectAllCheckbox.checked = allEnabledChecked;
+                }
+            });
+        });
+        
+        // Handle enroll button clicks
+        enrollButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const studentId = this.getAttribute('data-student-id');
+                const courseIds = this.getAttribute('data-course-ids').split(',');
+                
+                if (courseIds.length === 1) {
+                    // Single course enrollment
+                    enrollStudentToCourse(studentId, courseIds[0], 'enroll');
+                } else {
+                    // Multiple course enrollment
+                    enrollStudentToMultiCourses(studentId, courseIds);
+                }
+            });
+        });
+        
+        // Handle unenroll button clicks
+        unenrollButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const studentId = this.getAttribute('data-student-id');
+                const courseIds = this.getAttribute('data-course-ids').split(',');
+                
+                if (courseIds.length === 1) {
+                    // Single course unenrollment
+                    enrollStudentToCourse(studentId, courseIds[0], 'unenroll');
+                } else {
+                    // Multiple course unenrollment
+                    unenrollStudentFromMultiCourses(studentId, courseIds);
+                }
+            });
+        });
+        
+        // Handle batch enroll button
+        if (batchEnrollBtn) {
+            batchEnrollBtn.addEventListener('click', function() {
+                // Get all selected students
+                const selectedStudents = [];
+                document.querySelectorAll('.student-checkbox:checked:not(:disabled)').forEach(checkbox => {
+                    selectedStudents.push(checkbox.value);
+                });
+                
+                if (selectedStudents.length === 0) {
+                    showResponse('error', 'Please select at least one student to enroll');
+                    return;
+                }
+                
+                // Get all selected courses
+                const selectedCourses = [];
+                document.querySelectorAll('.course-checkbox:checked').forEach(checkbox => {
+                    selectedCourses.push(checkbox.value);
+                });
+                
+                // If "All Courses" is checked, handle it differently
+                if (allCoursesCheckbox && allCoursesCheckbox.checked) {
+                    // Handle "All Courses" with grade filter case
+                    batchEnrollStudentsMultiCourses(selectedStudents, ['all']);
+                } else if (selectedCourses.length === 0) {
+                    showResponse('error', 'Please select at least one course');
+                } else {
+                    // Batch enroll to selected courses
+                    batchEnrollStudentsMultiCourses(selectedStudents, selectedCourses);
+                }
+            });
+        }
+        
+        // Handle batch disenroll button
+        if (batchDisenrollBtn) {
+            batchDisenrollBtn.addEventListener('click', function() {
+                // Get all selected students
+                const selectedStudents = [];
+                document.querySelectorAll('.student-checkbox:checked').forEach(checkbox => {
+                    selectedStudents.push(checkbox.value);
+                });
+                
+                if (selectedStudents.length === 0) {
+                    showResponse('error', 'Please select at least one student to disenroll');
+                    return;
+                }
+                
+                // Get all selected courses
+                const selectedCourses = [];
+                document.querySelectorAll('.course-checkbox:checked').forEach(checkbox => {
+                    selectedCourses.push(checkbox.value);
+                });
+                
+                // If no courses selected but "All Courses" is checked
+                if ((allCoursesCheckbox && allCoursesCheckbox.checked) || selectedCourses.length > 0) {
+                    if (confirm(`Are you sure you want to disenroll ${selectedStudents.length} students from the selected courses?`)) {
+                        // Batch disenroll
+                        batchDisenrollStudentsMultiCourses(selectedStudents, selectedCourses.length > 0 ? selectedCourses : ['all']);
+                    }
+                } else {
+                    showResponse('error', 'Please select at least one course');
+                }
+            });
+        }
+        
+        // Function to clear all checkboxes
+        function clearAllCheckboxes() {
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+            
+            studentCheckboxes.forEach(checkbox => {
+                if (!checkbox.disabled) {
+                    checkbox.checked = false;
+                }
+            });
+        }
+        
+        // Function to display batch operation results
+        function displayBatchResults(results) {
+            let message = `
+                <h4>Enrollment Results</h4>
+                <p>Successfully processed ${results.successCourses}/${results.totalCourses} courses</p>
+                <p>Successfully enrolled ${results.successStudents}/${results.totalStudents} student-course combinations</p>
+            `;
+            
+            if (results.errors.length > 0) {
+                message += '<div class="mt-3"><strong>Errors:</strong></div><ul>';
+                results.errors.forEach(error => {
+                    message += `<li>${error}</li>`;
+                });
+                message += '</ul>';
+            }
+            
+            showResponse('custom', message);
+            
+            // Set a flag to clear checkboxes after reload
+            sessionStorage.setItem('clear_checkboxes', 'true');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+        
+        // Function to enroll a student in a single course
+        function enrollStudentToCourse(studentId, courseId, action) {
+            fetch('/api/enroll-student/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    course_id: courseId,
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showResponse('success', data.message);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showResponse('error', data.message);
+                }
+            })
+            .catch(error => {
+                showResponse('error', 'An error occurred: ' + error);
+            });
+        }
+        
+        // Function to enroll a student in multiple courses
+        function enrollStudentToMultiCourses(studentId, courseIds) {
+            let results = {
+                successCourses: 0,
+                totalCourses: courseIds.length,
+                successStudents: 0,
+                totalStudents: courseIds.length,
+                errors: []
+            };
+            let processedCourses = 0;
+            
+            courseIds.forEach(courseId => {
+                fetch('/api/enroll-student/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        course_id: courseId,
+                        action: 'enroll'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processedCourses++;
+                    
+                    if (data.status === 'success') {
+                        results.successCourses++;
+                        results.successStudents++;
+                    } else {
+                        results.errors.push(`Course ${courseId}: ${data.message}`);
+                    }
+                    
+                    // Once all requests are processed, show results
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                })
+                .catch(error => {
+                    processedCourses++;
+                    results.errors.push(`Course ${courseId}: ${error}`);
+                    
+                    // Once all requests are processed, show results
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                });
+            });
+        }
+        
+        // Function to unenroll a student from multiple courses
+        function unenrollStudentFromMultiCourses(studentId, courseIds) {
+            let results = {
+                successCourses: 0,
+                totalCourses: courseIds.length,
+                successStudents: 0,
+                totalStudents: courseIds.length,
+                errors: []
+            };
+            let processedCourses = 0;
+            
+            courseIds.forEach(courseId => {
+                fetch('/api/enroll-student/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        course_id: courseId,
+                        action: 'unenroll'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processedCourses++;
+                    
+                    if (data.status === 'success') {
+                        results.successCourses++;
+                        results.successStudents++;
+                    } else {
+                        results.errors.push(`Course ${courseId}: ${data.message}`);
+                    }
+                    
+                    // Once all requests are processed, show results
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                })
+                .catch(error => {
+                    processedCourses++;
+                    results.errors.push(`Course ${courseId}: ${error}`);
+                    
+                    // Once all requests are processed, show results
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                });
+            });
+        }
+        
+        // Function to batch enroll multiple students in multiple courses
+        function batchEnrollStudentsMultiCourses(studentIds, courseIds) {
+            let results = {
+                successCourses: 0,
+                totalCourses: courseIds.length,
+                successStudents: 0,
+                totalStudents: studentIds.length * courseIds.length,
+                errors: []
+            };
+            let processedCourses = 0;
+            
+            // If "All Courses" is selected with a grade filter
+            if (courseIds.length === 1 && courseIds[0] === 'all') {
+                const gradeFilter = new URLSearchParams(window.location.search).get('grade');
+                if (gradeFilter) {
+                    fetch('/api/batch-enroll-students/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            student_ids: studentIds,
+                            grade_filter: gradeFilter,
+                            all_courses: true
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            let message = `<div class="alert alert-success">${data.message}</div>`;
+                            
+                            if (data.error_count > 0 && data.errors.length > 0) {
+                                message += '<div class="mt-3"><strong>Errors:</strong></div><ul>';
+                                data.errors.forEach(error => {
+                                    message += `<li>${error}</li>`;
+                                });
+                                message += '</ul>';
+                            }
+                            
+                            showResponse('custom', message);
+                            
+                            // Set a flag to clear checkboxes after reload
+                            sessionStorage.setItem('clear_checkboxes', 'true');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            showResponse('error', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        showResponse('error', 'An error occurred: ' + error);
+                    });
+                    
+                    return;
+                }
+            }
+            
+            // Process each course individually
+            courseIds.forEach(courseId => {
+                fetch('/api/batch-enroll-students/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        student_ids: studentIds,
+                        course_id: courseId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processedCourses++;
+                    
+                    if (data.status === 'success') {
+                        results.successCourses++;
+                        results.successStudents += data.success_count;
+                    }
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        results.errors = results.errors.concat(data.errors);
+                    }
+                    
+                    // Once all requests are processed, show results and reload
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                })
+                .catch(error => {
+                    processedCourses++;
+                    results.errors.push('An error occurred: ' + error);
+                    
+                    // Once all requests are processed, show results and reload
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                });
+            });
+        }
+        
+        // Function to batch disenroll students from multiple courses
+        function batchDisenrollStudentsMultiCourses(studentIds, courseIds) {
+            let results = {
+                successCourses: 0,
+                totalCourses: courseIds.length,
+                successStudents: 0,
+                totalStudents: studentIds.length * courseIds.length,
+                errors: []
+            };
+            let processedCourses = 0;
+            
+            // If "All Courses" is checked, handle it specially
+            if (allCoursesCheckbox.checked) {
+                const gradeFilter = new URLSearchParams(window.location.search).get('grade');
+                if (gradeFilter) {
+                    fetch('/api/batch-disenroll-students/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            student_ids: studentIds,
+                            grade_filter: gradeFilter,
+                            all_courses: true
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            let message = `<div class="alert alert-success">${data.message}</div>`;
+                            
+                            if (data.error_count > 0 && data.errors.length > 0) {
+                                message += '<div class="mt-3"><strong>Errors:</strong></div><ul>';
+                                data.errors.forEach(error => {
+                                    message += `<li>${error}</li>`;
+                                });
+                                message += '</ul>';
+                            }
+                            
+                            showResponse('custom', message);
+                            // Set a flag to clear checkboxes after reload
+                            sessionStorage.setItem('clear_checkboxes', 'true');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            showResponse('error', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        showResponse('error', 'An error occurred: ' + error);
+                    });
+                    
+                    return;
+                }
+            }
+            
+            // Otherwise, process each course individually
+            courseIds.forEach(courseId => {
+                fetch('/api/batch-disenroll-students/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        student_ids: studentIds,
+                        course_id: courseId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processedCourses++;
+                    
+                    if (data.status === 'success') {
+                        results.successCourses++;
+                        results.successStudents += data.success_count;
+                    }
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        results.errors = results.errors.concat(data.errors);
+                    }
+                    
+                    // Once all requests are processed, show results and reload
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                })
+                .catch(error => {
+                    processedCourses++;
+                    results.errors.push('An error occurred: ' + error);
+                    
+                    // Once all requests are processed, show results and reload
+                    if (processedCourses === courseIds.length) {
+                        displayBatchResults(results);
+                    }
+                });
+            });
+        }
+        
+        // Check for the clear checkboxes flag on page load
+        if (sessionStorage.getItem('clear_checkboxes') === 'true') {
+            clearAllCheckboxes();
+            sessionStorage.removeItem('clear_checkboxes');
+        }
+        
+        // Helper function to get CSRF token
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        }
+        
+        // Helper function to display response messages
+        function showResponse(type, message) {
+            let html = '';
+            
+            if (type === 'success') {
+                html = `<div class="alert alert-success">${message}</div>`;
+            } else if (type === 'error') {
+                html = `<div class="alert alert-danger">${message}</div>`;
+            } else {
+                html = message;  // Custom HTML
+            }
+            
+            responseModalBody.innerHTML = html;
+            responseModal.show();
+        }
+
+        // Clear all enrollments for selected students
+        $('#clear-enrollments-btn').click(function() {
+            // Get all selected students
+            const selectedStudents = [];
+            $('.student-checkbox:checked').each(function() {
+                selectedStudents.push($(this).val());
+            });
+            
+            if (selectedStudents.length === 0) {
+                showResponse('error', 'Please select at least one student to clear enrollments');
+                return;
+            }
+            
+            if(confirm(`Are you sure you want to clear ALL SECTION ENROLLMENTS for ${selectedStudents.length} selected student(s)? This will remove them from all sections they are currently enrolled in.`)) {
+                // Perform the clear operation
+                clearStudentEnrollments(selectedStudents);
+            }
+        });
+        
+        // Function to clear enrollments for selected students
+        function clearStudentEnrollments(studentIds) {
+            const url = '/api/clear-student-enrollments/';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    student_ids: studentIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showResponse('success', `
+                        <h4>Enrollment Clearing Results</h4>
+                        <p>${data.message}</p>
+                        ${data.error_count > 0 ? `<p class="text-danger">Errors: ${data.error_count}</p>` : ''}
+                        ${data.errors.length > 0 ? `<ul class="text-danger"><li>${data.errors.join('</li><li>')}</li></ul>` : ''}
+                    `);
+                    
+                    // Set flag to clear checkboxes on reload
+                    sessionStorage.setItem('clear_checkboxes', 'true');
+                    
+                    // Reload the page after 2 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showResponse('error', data.message);
+                }
+            })
+            .catch(error => {
+                showResponse('error', 'An error occurred: ' + error);
+            });
+        }
+    });
+</script> 

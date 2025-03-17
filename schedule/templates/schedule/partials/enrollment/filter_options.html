@@ -1,0 +1,48 @@
+<!-- Filter Options Card -->
+<div class="card h-100">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Filter Options</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" id="filter-form">
+            <div class="mb-3">
+                <label for="grade" class="form-label">Grade Level</label>
+                <select class="form-select" id="grade" name="grade">
+                    <option value="">All Grades</option>
+                    {% for grade in grades %}
+                    <option value="{{ grade }}" {% if grade_filter == grade|stringformat:"i" %}selected{% endif %}>
+                        Grade {{ grade }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Course</label>
+                <div class="course-filter-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="all-courses" {% if not selected_course_ids %}checked{% endif %}>
+                        <label class="form-check-label" for="all-courses">
+                            All Courses
+                        </label>
+                    </div>
+                    <hr class="my-2">
+                    {% for course in courses %}
+                    <div class="form-check">
+                        <input class="form-check-input course-checkbox" type="checkbox" 
+                               id="course-{{ course.id }}" name="course_id" value="{{ course.id }}"
+                               {% if course.id in selected_course_ids %}checked{% endif %}>
+                        <label class="form-check-label" for="course-{{ course.id }}">
+                            {{ course.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+</div> 
