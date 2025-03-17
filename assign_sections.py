@@ -1,11 +1,20 @@
-from schedule.views.section_registration_views import perfect_balance_assignment
+#!/usr/bin/env python
+import os
+import django
+
+# Set up Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'scheduler.settings')
+django.setup()
+
+# Now import Django models and services
+from schedule.services.section_registration_services.algorithm_service import AlgorithmService
 
 # Run the algorithm for language courses
-result = perfect_balance_assignment('SPA6')
+result = AlgorithmService.balance_section_assignments('SPA6')
 print(result)
 
-result = perfect_balance_assignment('CHI6')
+result = AlgorithmService.balance_section_assignments('CHI6')
 print(result)
 
-result = perfect_balance_assignment('FRE6')
+result = AlgorithmService.balance_section_assignments('FRE6')
 print(result)

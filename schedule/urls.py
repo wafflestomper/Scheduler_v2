@@ -36,7 +36,7 @@ from .views.enrollment_views import (
 )
 from .views.section_registration_views import (
     section_registration, registration_home, view_student_schedule,
-    perfect_balance_assignment, assign_language_course_sections, assign_trimester_course_sections
+    assign_language_course_sections, assign_trimester_course_sections
 )
 from .views.settings_views import section_settings
 
