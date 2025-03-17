@@ -1,5 +1,5 @@
-course_id,section_number,teacher,period,room,max_size
-C001,1,T001,P001,R001,30
-C001,2,T001,P002,R002,25
-C002,1,T002,P003,R001,30
-C003,1,T001,P004,R003,20 
+course,section_number,teacher,period,room,max_size,when
+C001,1,T001,P001,R001,30,year
+C001,2,T001,P002,R002,25,year
+C002,1,T002,P003,R001,30,year
+C003,1,T001,P004,R003,20,year 

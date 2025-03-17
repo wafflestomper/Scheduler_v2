@@ -109,264 +109,385 @@ class CSVUploadView(View):
     def get_expected_headers(self, data_type):
         """Get expected headers for different data types."""
         if data_type == 'students':
-            return ['first_name', 'last_name', 'grade', 'email']
+            return ['student_id', 'first_name', 'nickname', 'last_name', 'grade_level']
         elif data_type == 'teachers':
-            return ['first_name', 'last_name', 'email']
+            return ['teacher_id', 'first_name', 'last_name', 'availability', 'subjects']
         elif data_type == 'rooms':
-            return ['name', 'capacity', 'room_type']
+            return ['room_id', 'number', 'capacity', 'type']
         elif data_type == 'courses':
-            return ['course_id', 'name', 'course_type', 'teachers', 'grade_level', 'sections_needed', 'duration']
+            return ['course_id', 'name', 'course_type', 'eligible_teachers', 'grade_level', 'sections_needed', 'duration']
         elif data_type == 'periods':
-            return ['name', 'start_time', 'end_time']
+            return ['period_id', 'period_name', 'days', 'slot', 'start_time', 'end_time']
         elif data_type == 'sections':
             return ['course', 'section_number', 'teacher', 'period', 'room', 'max_size', 'when']
         return []
     
     def process_students(self, reader):
         """Process students data from CSV."""
-        created, updated = 0, 0
-        for row in reader:
-            if not any(row):  # Skip empty rows
-                continue
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
+            try:
+                if not any(row):  # Skip empty rows
+                    continue
+                    
+                # Get field values based on CSV column order
+                student_id = row[0].strip() if len(row) > 0 else None
+                first_name = row[1].strip() if len(row) > 1 else None
+                nickname = row[2].strip() if len(row) > 2 else None
+                last_name = row[3].strip() if len(row) > 3 else None
+                grade_level = int(row[4].strip()) if len(row) > 4 and row[4].strip() else None
                 
-            first_name = row[0].strip()
-            last_name = row[1].strip()
-            grade = int(row[2].strip()) if row[2].strip() else None
-            email = row[3].strip() if len(row) > 3 and row[3].strip() else None
-            
-            # Check if student exists
-            student, created_flag = Student.objects.update_or_create(
-                first_name=first_name,
-                last_name=last_name,
-                defaults={'grade': grade, 'email': email}
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+                # Validate required fields
+                if not student_id:
+                    errors.append(f'Line {i}: Missing student ID')
+                    continue
+                
+                if not first_name:
+                    errors.append(f'Line {i}: Missing first name')
+                    continue
+                    
+                if not last_name:
+                    errors.append(f'Line {i}: Missing last name')
+                    continue
+                
+                # Construct full name
+                name = f"{first_name} {last_name}"
+                if nickname:
+                    name = f"{first_name} '{nickname}' {last_name}"
+                
+                # Check if student exists
+                try:
+                    student = Student.objects.get(id=student_id)
+                    # Update existing student
+                    student.name = name
+                    student.grade_level = grade_level
+                    student.save()
+                    updated += 1
+                except Student.DoesNotExist:
+                    # Create new student
+                    Student.objects.create(
+                        id=student_id,
+                        name=name,
+                        grade_level=grade_level
+                    )
+                    created += 1
+            except Exception as e:
+                errors.append(f'Line {i}: Error processing student: {str(e)}')
         
-        return {'created': created, 'updated': updated}
+        return {'created': created, 'updated': updated, 'errors': errors}
     
     def process_teachers(self, reader):
         """Process teachers data from CSV."""
-        created, updated = 0, 0
-        for row in reader:
-            if not any(row):  # Skip empty rows
-                continue
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
+            try:
+                if not any(row):  # Skip empty rows
+                    continue
                 
-            first_name = row[0].strip()
-            last_name = row[1].strip()
-            email = row[2].strip() if len(row) > 2 and row[2].strip() else None
-            
-            # Check if teacher exists
-            teacher, created_flag = Teacher.objects.update_or_create(
-                first_name=first_name,
-                last_name=last_name,
-                defaults={'email': email}
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+                # Get field values based on CSV column order
+                teacher_id = row[0].strip() if len(row) > 0 else None
+                first_name = row[1].strip() if len(row) > 1 else None
+                last_name = row[2].strip() if len(row) > 2 else None
+                availability = row[3].strip() if len(row) > 3 and row[3].strip() else ""
+                subjects = row[4].strip() if len(row) > 4 and row[4].strip() else ""
+                
+                # Validate required fields
+                if not teacher_id:
+                    errors.append(f'Line {i}: Missing teacher ID')
+                    continue
+                
+                if not first_name:
+                    errors.append(f'Line {i}: Missing first name')
+                    continue
+                    
+                if not last_name:
+                    errors.append(f'Line {i}: Missing last name')
+                    continue
+                
+                # Construct full name
+                name = f"{first_name} {last_name}"
+                
+                # Check if teacher exists
+                try:
+                    teacher = Teacher.objects.get(id=teacher_id)
+                    # Update existing teacher
+                    teacher.name = name
+                    teacher.availability = availability
+                    teacher.subjects = subjects
+                    teacher.save()
+                    updated += 1
+                except Teacher.DoesNotExist:
+                    # Create new teacher
+                    Teacher.objects.create(
+                        id=teacher_id,
+                        name=name,
+                        availability=availability,
+                        subjects=subjects
+                    )
+                    created += 1
+            except Exception as e:
+                errors.append(f'Line {i}: Error processing teacher: {str(e)}')
         
-        return {'created': created, 'updated': updated}
+        return {'created': created, 'updated': updated, 'errors': errors}
     
     def process_rooms(self, reader):
         """Process rooms data from CSV."""
-        created, updated = 0, 0
-        for row in reader:
-            if not any(row):  # Skip empty rows
-                continue
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
+            try:
+                if not any(row):  # Skip empty rows
+                    continue
+                    
+                # Get field values
+                room_id = row[0].strip() if len(row) > 0 else None
+                number = row[1].strip() if len(row) > 1 else None
+                capacity = int(row[2].strip()) if len(row) > 2 and row[2].strip() else 30
+                room_type = row[3].strip() if len(row) > 3 and row[3].strip() else 'classroom'
                 
-            name = row[0].strip()
-            capacity = int(row[1].strip()) if row[1].strip() else 30
-            room_type = row[2].strip() if len(row) > 2 and row[2].strip() else ''
-            
-            # Check if room exists
-            room, created_flag = Room.objects.update_or_create(
-                name=name,
-                defaults={'capacity': capacity, 'room_type': room_type}
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+                # Validate required fields
+                if not room_id:
+                    errors.append(f'Line {i}: Missing room ID')
+                    continue
+                
+                if not number:
+                    errors.append(f'Line {i}: Missing room number')
+                    continue
+                
+                # Check if room exists
+                try:
+                    room = Room.objects.get(id=room_id)
+                    # Update existing room
+                    room.number = number
+                    room.capacity = capacity
+                    room.type = room_type
+                    room.save()
+                    updated += 1
+                except Room.DoesNotExist:
+                    # Create new room
+                    Room.objects.create(
+                        id=room_id,
+                        number=number,
+                        capacity=capacity,
+                        type=room_type
+                    )
+                    created += 1
+            except Exception as e:
+                errors.append(f'Line {i}: Error processing room: {str(e)}')
         
-        return {'created': created, 'updated': updated}
+        return {'created': created, 'updated': updated, 'errors': errors}
     
     def process_courses(self, reader):
         """Process courses data from CSV."""
-        created, updated = 0, 0
-        for row in reader:
-            if not any(row):  # Skip empty rows
-                continue
-            
-            course_id = row[0].strip() if row[0].strip() else None
-            name = row[1].strip()
-            course_type = row[2].strip()
-            teachers = row[3].strip() if len(row) > 3 else ''
-            grade_level = int(row[4].strip()) if len(row) > 4 and row[4].strip() else 0
-            sections_needed = int(row[5].strip()) if len(row) > 5 and row[5].strip() else 1
-            duration = row[6].strip() if len(row) > 6 and row[6].strip() else 'year'
-            
-            # Check if course exists
-            course, created_flag = Course.objects.update_or_create(
-                id=course_id,
-                defaults={
-                    'name': name,
-                    'type': course_type,
-                    'eligible_teachers': teachers,
-                    'grade_level': grade_level,
-                    'sections_needed': sections_needed,
-                    'duration': duration
-                }
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
+            try:
+                if not any(row):  # Skip empty rows
+                    continue
+                
+                # Get field values
+                course_id = row[0].strip() if len(row) > 0 else None
+                name = row[1].strip() if len(row) > 1 else None
+                course_type = row[2].strip() if len(row) > 2 else None
+                teachers = row[3].strip() if len(row) > 3 and row[3].strip() else ''
+                grade_level = int(row[4].strip()) if len(row) > 4 and row[4].strip() else 0
+                sections_needed = int(row[5].strip()) if len(row) > 5 and row[5].strip() else 1
+                duration = row[6].strip() if len(row) > 6 and row[6].strip() else 'year'
+                
+                # Validate required fields
+                if not course_id:
+                    errors.append(f'Line {i}: Missing course ID')
+                    continue
+                
+                if not name:
+                    errors.append(f'Line {i}: Missing course name')
+                    continue
+                
+                if not course_type:
+                    errors.append(f'Line {i}: Missing course type')
+                    continue
+                
+                # Check if course exists
+                try:
+                    course = Course.objects.get(id=course_id)
+                    # Update existing course
+                    course.name = name
+                    course.type = course_type
+                    course.eligible_teachers = teachers
+                    course.grade_level = grade_level
+                    course.sections_needed = sections_needed
+                    course.duration = duration
+                    course.save()
+                    updated += 1
+                except Course.DoesNotExist:
+                    # Create new course
+                    Course.objects.create(
+                        id=course_id,
+                        name=name,
+                        type=course_type,
+                        eligible_teachers=teachers,
+                        grade_level=grade_level,
+                        sections_needed=sections_needed,
+                        duration=duration
+                    )
+                    created += 1
+            except Exception as e:
+                errors.append(f'Line {i}: Error processing course: {str(e)}')
         
-        return {'created': created, 'updated': updated}
+        return {'created': created, 'updated': updated, 'errors': errors}
     
     def process_periods(self, reader):
         """Process periods data from CSV."""
-        created, updated = 0, 0
-        for row in reader:
-            if not any(row):  # Skip empty rows
-                continue
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
+            try:
+                if not any(row):  # Skip empty rows
+                    continue
+                    
+                # Get field values
+                period_id = row[0].strip() if len(row) > 0 else None
+                period_name = row[1].strip() if len(row) > 1 else None
+                days = row[2].strip() if len(row) > 2 and row[2].strip() else 'M'
+                slot = row[3].strip() if len(row) > 3 and row[3].strip() else None
+                start_time = row[4].strip() if len(row) > 4 and row[4].strip() else None
+                end_time = row[5].strip() if len(row) > 5 and row[5].strip() else None
                 
-            name = row[0].strip()
-            start_time = row[1].strip()
-            end_time = row[2].strip()
-            
-            # Check if period exists
-            period, created_flag = Period.objects.update_or_create(
-                name=name,
-                defaults={'start_time': start_time, 'end_time': end_time}
-            )
-            
-            if created_flag:
-                created += 1
-            else:
-                updated += 1
+                # Validate required fields
+                if not period_id:
+                    errors.append(f'Line {i}: Missing period ID')
+                    continue
+                
+                if not slot:
+                    errors.append(f'Line {i}: Missing period slot')
+                    continue
+                
+                if not start_time:
+                    errors.append(f'Line {i}: Missing start time')
+                    continue
+                
+                if not end_time:
+                    errors.append(f'Line {i}: Missing end time')
+                    continue
+                
+                # Check if period exists
+                try:
+                    period = Period.objects.get(id=period_id)
+                    # Update existing period
+                    period.period_name = period_name
+                    period.days = days
+                    period.slot = slot
+                    period.start_time = start_time
+                    period.end_time = end_time
+                    period.save()
+                    updated += 1
+                except Period.DoesNotExist:
+                    # Create new period
+                    Period.objects.create(
+                        id=period_id,
+                        period_name=period_name,
+                        days=days,
+                        slot=slot,
+                        start_time=start_time,
+                        end_time=end_time
+                    )
+                    created += 1
+            except Exception as e:
+                errors.append(f'Line {i}: Error processing period: {str(e)}')
         
-        return {'created': created, 'updated': updated}
+        return {'created': created, 'updated': updated, 'errors': errors}
     
     def process_sections(self, reader):
         """Process sections data from CSV."""
-        created, updated = 0, 0
-        errors = []
-        
-        for row_index, row in enumerate(reader, start=1):
-            if not any(row):  # Skip empty rows
-                continue
-                
-            course_id = row[0].strip() if row[0].strip() else None
-            section_number = row[1].strip() if len(row) > 1 and row[1].strip() else '1'
-            teacher = row[2].strip() if len(row) > 2 and row[2].strip() else None
-            period = row[3].strip() if len(row) > 3 and row[3].strip() else None
-            room = row[4].strip() if len(row) > 4 and row[4].strip() else None
-            max_size = row[5].strip() if len(row) > 5 and row[5].strip() else None
-            when = row[6].strip() if len(row) > 6 and row[6].strip() else 'year'
-            
-            # Convert max_size to integer if provided
-            if max_size:
-                try:
-                    max_size = int(max_size)
-                except ValueError:
-                    errors.append(f"Row {row_index}: max_size must be a number, got '{max_size}'")
-                    max_size = None
-            
-            # Get related objects or None
+        created, updated, errors = 0, 0, []
+        for i, row in enumerate(reader, start=2):  # Start from 2 for line number (after header)
             try:
-                # Course is required
-                if not course_id:
-                    errors.append(f"Row {row_index}: Course ID is required")
+                if not any(row):  # Skip empty rows
                     continue
                     
+                # Get field values
+                course_id = row[0].strip() if len(row) > 0 else None
+                section_number = row[1].strip() if len(row) > 1 and row[1].strip() else '1'
+                teacher_id = row[2].strip() if len(row) > 2 and row[2].strip() else None
+                period_id = row[3].strip() if len(row) > 3 and row[3].strip() else None
+                room_id = row[4].strip() if len(row) > 4 and row[4].strip() else None
+                max_size = int(row[5].strip()) if len(row) > 5 and row[5].strip() else 30  # Default to 30
+                when = row[6].strip() if len(row) > 6 and row[6].strip() else 'year'
+                
+                # Validate required fields
+                if not course_id:
+                    errors.append(f'Line {i}: Missing course ID')
+                    continue
+                
+                # Get related objects
                 try:
-                    course = Course.objects.get(pk=course_id)
+                    course = Course.objects.get(id=course_id)
                 except Course.DoesNotExist:
-                    errors.append(f"Row {row_index}: Course with ID '{course_id}' does not exist")
+                    errors.append(f'Line {i}: Course with ID {course_id} does not exist')
                     continue
                 
-                # These are optional and can be None
-                teacher_obj = None
-                room_obj = None
-                
-                # Only try to get teacher or room if values were provided
-                if teacher:
+                teacher = None
+                if teacher_id:
                     try:
-                        teacher_obj = Teacher.objects.get(pk=teacher)
+                        teacher = Teacher.objects.get(id=teacher_id)
                     except Teacher.DoesNotExist:
-                        errors.append(f"Row {row_index}: Teacher with ID '{teacher}' does not exist")
-                
-                if room:
-                    try:
-                        room_obj = Room.objects.get(pk=room)
-                    except Room.DoesNotExist:
-                        errors.append(f"Row {row_index}: Room with ID '{room}' does not exist")
-                
-                # Period is required
-                try:
-                    period_obj = Period.objects.get(pk=period) if period else None
-                    if not period_obj:
-                        errors.append(f"Row {row_index}: Period is required")
+                        errors.append(f'Line {i}: Teacher with ID {teacher_id} does not exist')
                         continue
-                except Period.DoesNotExist:
-                    errors.append(f"Row {row_index}: Period with ID '{period}' does not exist")
-                    continue
                 
-                # Create or update the section
-                try:
-                    section_number_int = int(section_number)
-                except ValueError:
-                    errors.append(f"Row {row_index}: section_number must be a number, got '{section_number}'")
-                    continue
+                period = None
+                if period_id:
+                    try:
+                        period = Period.objects.get(id=period_id)
+                    except Period.DoesNotExist:
+                        errors.append(f'Line {i}: Period with ID {period_id} does not exist')
+                        continue
                 
-                # Create the section with a generated ID based on course_id and section_number
+                room = None
+                if room_id:
+                    try:
+                        room = Room.objects.get(id=room_id)
+                    except Room.DoesNotExist:
+                        errors.append(f'Line {i}: Room with ID {room_id} does not exist')
+                        continue
+                
+                # Generate a unique ID for the section
                 section_id = f"{course_id}-{section_number}"
                 
-                # Check if section already exists
+                # Create or update section
                 try:
-                    existing_section = Section.objects.get(pk=section_id)
-                    # Update existing section
-                    existing_section.course = course
-                    existing_section.section_number = section_number_int
-                    existing_section.teacher = teacher_obj
-                    existing_section.period = period_obj
-                    existing_section.room = room_obj
-                    existing_section.max_size = max_size
-                    existing_section.when = when
-                    existing_section.save()
-                    updated += 1
-                except Section.DoesNotExist:
-                    # Create new section
-                    section = Section(
-                        id=section_id,
-                        course=course,
-                        section_number=section_number_int,
-                        teacher=teacher_obj,
-                        period=period_obj,
-                        room=room_obj,
-                        max_size=max_size,
-                        when=when
-                    )
-                    section.save()
-                    created += 1
-                    
+                    # Try to find an existing section by ID
+                    try:
+                        section = Section.objects.get(id=section_id)
+                        # Update existing section
+                        section.course = course
+                        section.section_number = int(section_number)
+                        if teacher:
+                            section.teacher = teacher
+                        if period:
+                            section.period = period
+                        if room:
+                            section.room = room
+                        section.max_size = max_size
+                        section.when = when
+                        section.save()
+                        updated += 1
+                    except Section.DoesNotExist:
+                        # Create new section
+                        Section.objects.create(
+                            id=section_id,
+                            course=course,
+                            section_number=int(section_number),
+                            teacher=teacher,
+                            period=period,
+                            room=room,
+                            max_size=max_size,
+                            when=when
+                        )
+                        created += 1
+                except Exception as e:
+                    errors.append(f'Line {i}: Error processing section: {str(e)}')
             except Exception as e:
-                errors.append(f"Row {row_index}: Unexpected error: {str(e)}")
-                continue
+                errors.append(f'Line {i}: Error processing section: {str(e)}')
         
-        result = {'created': created, 'updated': updated}
-        if errors:
-            result['errors'] = errors
-        return result
+        return {'created': created, 'updated': updated, 'errors': errors}
 
 
 def download_template_csv(request, template_type):
