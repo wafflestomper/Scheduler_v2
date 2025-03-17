@@ -606,4 +606,21 @@ This enhancement provides students, teachers, and administrators with a more com
 - Improved mobile responsiveness by simplifying the menu structure
 - Maintained all functionality while providing a cleaner, more organized user experience
 
+## 2024-03-17 - Cleaned Up Scheduling Algorithm Code
+
+- Created a comprehensive cleanup plan to remove and replace scheduling algorithms
+- Backed up original algorithm files (total 2,903 lines) to prepare for reimplementation:
+  - three_group_elective_algorithm.py
+  - two_group_elective_algorithm.py
+  - language_core_algorithm.py
+  - art_music_ww_algorithm.py
+  - balance_assignment.py
+  - trimester_course_utils.py
+- Created placeholder functions in algorithm_placeholders.py to maintain UI functionality
+- Simplified the main schedule generation function to prevent errors
+- Updated imports across the application to use placeholder functions
+- Prepared the codebase for implementing new, more modular scheduling algorithms
+- Ensured all UI components continue to work without errors
+- Added informative messages to users when scheduling functions are used
+
 ## Next Steps 
