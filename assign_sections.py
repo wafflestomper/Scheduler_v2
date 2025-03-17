@@ -9,6 +9,8 @@ django.setup()
 # Now import Django models and services
 from schedule.services.section_registration_services.algorithm_service import AlgorithmService
 
+print("NOTE: Running with placeholder algorithms - no actual assignments will be made")
+
 # Run the algorithm for language courses
 result = AlgorithmService.balance_section_assignments('SPA6')
 print(result)

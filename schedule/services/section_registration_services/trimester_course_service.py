@@ -12,8 +12,7 @@ class TrimesterCourseService:
     @staticmethod
     def assign_trimester_courses(student, group_ids, preferred_period=None):
         """
-        Assigns a student to one course from each trimester course group in different trimesters
-        but during the same period.
+        Placeholder for assigning a student to trimester courses.
         
         Args:
             student: The Student object to assign
@@ -23,171 +22,27 @@ class TrimesterCourseService:
         Returns:
             dict: Result with success flag, message, and assignments
         """
-        # Get the trimester course groups
-        groups = TrimesterCourseGroup.objects.filter(id__in=group_ids).prefetch_related('courses')
-        
-        if not groups:
-            return {
-                'success': False,
-                'message': "No valid trimester course groups specified",
-                'assignments': []
-            }
-        
-        # Get all courses from these groups
-        all_courses = []
-        for group in groups:
-            all_courses.extend(list(group.courses.all()))
-        
-        # Ensure student is enrolled in these courses
-        for course in all_courses:
-            CourseEnrollment.objects.get_or_create(student=student, course=course)
-        
-        # Clear any existing assignments for these courses
-        existing_assignments = Enrollment.objects.filter(
-            student=student,
-            section__course__in=all_courses
-        )
-        if existing_assignments.exists():
-            existing_assignments.delete()
-        
-        # Get all sections for these courses
-        sections = Section.objects.filter(
-            course__in=all_courses
-        ).select_related('course', 'period')
-        
-        # Organize sections by period, trimester, and group
-        sections_by_period = {}
-        for section in sections:
-            period_id = section.period_id if section.period else None
-            if not period_id:
-                continue  # Skip sections without a period
-                
-            trimester = section.when
-            course_id = section.course_id
-            
-            # Determine which group this course belongs to
-            group_id = None
-            for group in groups:
-                if course_id in [c.id for c in group.courses.all()]:
-                    group_id = group.id
-                    break
-                    
-            if not group_id:
-                continue  # Skip sections for courses not in requested groups
-            
-            # Initialize nested dictionaries if needed
-            if period_id not in sections_by_period:
-                sections_by_period[period_id] = {'trimesters': {}}
-                
-            if trimester not in sections_by_period[period_id]['trimesters']:
-                sections_by_period[period_id]['trimesters'][trimester] = {}
-                
-            if group_id not in sections_by_period[period_id]['trimesters'][trimester]:
-                sections_by_period[period_id]['trimesters'][trimester][group_id] = []
-                
-            sections_by_period[period_id]['trimesters'][trimester][group_id].append(section)
-        
-        # Find a valid assignment
-        valid_assignments = []
-        
-        # Check each period
-        for period_id, period_data in sections_by_period.items():
-            # Skip if preferred_period specified and this isn't it
-            if preferred_period and period_id != preferred_period.id:
-                continue
-                
-            trimesters = period_data['trimesters']
-            
-            # Try to assign one course from each group to a different trimester
-            assignment = TrimesterCourseService._find_valid_assignment(trimesters, groups)
-            
-            if assignment:
-                valid_assignments.append({
-                    'period_id': period_id,
-                    'assignment': assignment
-                })
-        
-        # If no valid assignments found, return failure
-        if not valid_assignments:
-            return {
-                'success': False,
-                'message': "Could not find a valid assignment with one course from each group in different trimesters",
-                'assignments': []
-            }
-        
-        # Choose the first valid assignment (or the preferred one if valid)
-        chosen_assignment = valid_assignments[0]
-        
-        # Create enrollments for the assigned sections
-        assignments = []
-        with transaction.atomic():
-            for section in chosen_assignment['assignment']:
-                enrollment = Enrollment.objects.create(
-                    student=student,
-                    section=section
-                )
-                assignments.append(enrollment)
-        
-        # Get the period name
-        period = Period.objects.filter(id=chosen_assignment['period_id']).first()
-        period_name = period.period_name if period else f"Period {chosen_assignment['period_id']}"
+        student_name = student.name if hasattr(student, 'name') else str(student)
         
         return {
-            'success': True,
-            'message': f"Assigned {len(assignments)} courses from different groups in {period_name}",
-            'assignments': assignments
+            'success': False,
+            'message': f"Trimester course assignment temporarily unavailable: algorithm is being reimplemented for {student_name}",
+            'assignments': []
         }
     
     @staticmethod
     def _find_valid_assignment(trimesters, groups):
         """
-        Find a valid assignment with one course from each group in different trimesters.
+        Placeholder for finding a valid assignment.
         
         Args:
             trimesters: Dictionary of trimester -> group_id -> sections
             groups: List of TrimesterCourseGroup objects
             
         Returns:
-            list or None: List of sections if valid assignment found, None otherwise
+            None: Placeholder always returns None
         """
-        # Create a list of all group IDs
-        group_ids = [group.id for group in groups]
-        
-        # Try all permutations of trimester assignments
-        trimester_names = list(trimesters.keys())
-        
-        # If there aren't enough trimesters, fail
-        if len(trimester_names) < len(group_ids):
-            return None
-        
-        # Try to assign each group to a different trimester
-        assignment = []
-        used_trimesters = set()
-        
-        for group_id in group_ids:
-            assigned = False
-            
-            # Try each trimester
-            for trimester in trimester_names:
-                # Skip if trimester already used
-                if trimester in used_trimesters:
-                    continue
-                
-                # Check if this group has sections in this trimester
-                if trimester in trimesters and group_id in trimesters[trimester]:
-                    # Use the first available section
-                    if trimesters[trimester][group_id]:
-                        section = trimesters[trimester][group_id][0]
-                        assignment.append(section)
-                        used_trimesters.add(trimester)
-                        assigned = True
-                        break
-            
-            # If this group couldn't be assigned, return failure
-            if not assigned:
-                return None
-        
-        return assignment
+        return None
     
     @staticmethod
     def get_trimester_course_conflicts(student):
@@ -248,167 +103,37 @@ class TrimesterCourseService:
                 'message': f"Trimester courses assigned to different periods: {', '.join(f'Period {p}' for p in periods)}"
             })
         
-        # Check if courses are in different trimesters
-        trimesters = {}
-        for assignment in trimester_assignments:
-            trimester = assignment.section.when
-            if trimester in trimesters:
-                conflicts.append({
-                    'type': 'same_trimester',
-                    'message': f"Multiple trimester courses assigned to {trimester}: {trimesters[trimester]} and {assignment.section.course.name}"
-                })
-            else:
-                trimesters[trimester] = assignment.section.course.name
-        
         return conflicts
     
     @staticmethod
     def balance_trimester_courses():
         """
-        Balance enrollments across trimester course sections.
+        Placeholder for balancing trimester courses.
         
         Returns:
-            dict: Result with success flag, message, and changes made
+            dict: Result with success flag and message
         """
-        # Get all trimester groups and their courses
-        trimester_groups = TrimesterCourseGroup.objects.all().prefetch_related('courses')
-        
-        # Create a list of all trimester course IDs
-        all_trimester_course_ids = []
-        for group in trimester_groups:
-            all_trimester_course_ids.extend([c.id for c in group.courses.all()])
-        
-        # Get all sections for these courses
-        sections = Section.objects.filter(
-            course__id__in=all_trimester_course_ids
-        ).select_related('course', 'period')
-        
-        # Group by period, trimester, and course
-        sections_by_period_trimester_course = {}
-        for section in sections:
-            period_id = section.period_id if section.period else None
-            trimester = section.when
-            course_id = section.course_id
-            
-            if period_id not in sections_by_period_trimester_course:
-                sections_by_period_trimester_course[period_id] = {}
-                
-            if trimester not in sections_by_period_trimester_course[period_id]:
-                sections_by_period_trimester_course[period_id][trimester] = {}
-                
-            if course_id not in sections_by_period_trimester_course[period_id][trimester]:
-                sections_by_period_trimester_course[period_id][trimester][course_id] = []
-                
-            sections_by_period_trimester_course[period_id][trimester][course_id].append(section)
-        
-        # Balance enrollments
-        changes_made = 0
-        with transaction.atomic():
-            for period_id, trimester_data in sections_by_period_trimester_course.items():
-                for trimester, course_data in trimester_data.items():
-                    for course_id, section_list in course_data.items():
-                        # Skip if only one section
-                        if len(section_list) <= 1:
-                            continue
-                            
-                        # Get enrollment counts
-                        section_enrollments = {}
-                        total_enrollments = 0
-                        
-                        for section in section_list:
-                            enrollment_count = section.students.count()
-                            section_enrollments[section.id] = {
-                                'section': section,
-                                'count': enrollment_count
-                            }
-                            total_enrollments += enrollment_count
-                        
-                        # Calculate target size (even distribution)
-                        target_size = total_enrollments // len(section_list)
-                        
-                        # Balance sections
-                        changes_made += TrimesterCourseService._balance_sections(
-                            section_enrollments, 
-                            target_size
-                        )
-        
         return {
-            'success': True,
-            'message': f"Balanced trimester course sections with {changes_made} student reassignments",
-            'changes_made': changes_made
+            'success': False,
+            'message': "Trimester course balancing temporarily unavailable: algorithm is being reimplemented",
+            'balanced_sections': 0,
+            'unbalanced_sections': 0
         }
     
     @staticmethod
     def _balance_sections(section_enrollments, target_size):
         """
-        Balance enrollments across sections of a course.
+        Placeholder for balancing sections.
         
         Args:
-            section_enrollments: Dictionary of section_id -> {section, count}
-            target_size: Target enrollment size for each section
+            section_enrollments: List of section enrollments
+            target_size: Target section size
             
         Returns:
-            int: Number of changes made
+            dict: Result with success flag and message
         """
-        # Identify overloaded and underloaded sections
-        overloaded_sections = []
-        underloaded_sections = []
-        
-        for section_id, data in section_enrollments.items():
-            if data['count'] > target_size + 1:
-                # This section has more than target + 1 students
-                overloaded_sections.append({
-                    'section': data['section'],
-                    'count': data['count'],
-                    'excess': data['count'] - target_size
-                })
-            elif data['count'] < target_size:
-                # This section has fewer than target students
-                underloaded_sections.append({
-                    'section': data['section'],
-                    'count': data['count'],
-                    'needed': target_size - data['count']
-                })
-        
-        # Move students from overloaded to underloaded sections
-        changes_made = 0
-        
-        for overloaded in overloaded_sections:
-            for underloaded in underloaded_sections:
-                # Skip if underloaded section is now at target
-                if underloaded['needed'] <= 0:
-                    continue
-                    
-                # Skip if overloaded section has no more excess
-                if overloaded['excess'] <= 0:
-                    break
-                    
-                # Calculate how many students to move
-                to_move = min(overloaded['excess'], underloaded['needed'])
-                
-                if to_move > 0:
-                    # Get students to move
-                    students_to_move = Enrollment.objects.filter(
-                        section=overloaded['section']
-                    ).select_related('student')[:to_move]
-                    
-                    # Move each student
-                    for enrollment in students_to_move:
-                        student = enrollment.student
-                        
-                        # Delete the old enrollment
-                        enrollment.delete()
-                        
-                        # Create a new enrollment
-                        Enrollment.objects.create(
-                            student=student,
-                            section=underloaded['section']
-                        )
-                        
-                        changes_made += 1
-                    
-                    # Update counts
-                    overloaded['excess'] -= to_move
-                    underloaded['needed'] -= to_move
-        
-        return changes_made 
+        return {
+            'success': False,
+            'message': "Section balancing temporarily unavailable: algorithm is being reimplemented",
+            'moved_enrollments': []
+        } 
