@@ -28,8 +28,11 @@ from .views.import_export_views import (
     CSVUploadView, download_template_csv
 )
 from .views.enrollment_views import (
-    enroll_students, enroll_student_to_course, batch_enroll_students, 
-    batch_disenroll_students, assign_students_to_sections, clear_student_enrollments_api
+    enroll_students, enroll_student_in_course, remove_student_from_course, 
+    bulk_enroll_students_in_course, enroll_grade_in_course,
+    assign_students_to_sections, clear_student_enrollments_api,
+    enroll_student_in_section, remove_student_from_section, bulk_enroll_students_in_section,
+    assign_student_to_course_section
 )
 from .views.section_registration_views import (
     section_registration, registration_home, view_student_schedule,
@@ -73,11 +76,16 @@ urlpatterns = [
     
     # Enrollment management
     path('enroll-students/', enroll_students, name='enroll_students'),
-    path('api/enroll-student-to-course/', enroll_student_to_course, name='enroll_student_to_course'),
-    path('api/batch-enroll-students/', batch_enroll_students, name='batch_enroll_students'),
-    path('api/batch-disenroll-students/', batch_disenroll_students, name='batch_disenroll_students'),
+    path('api/enroll-student-to-course/', enroll_student_in_course, name='enroll_student_to_course'),
+    path('api/batch-enroll-students/', bulk_enroll_students_in_course, name='batch_enroll_students'),
+    path('api/batch-disenroll-students/', remove_student_from_course, name='batch_disenroll_students'),
     path('api/clear-student-enrollments/', clear_student_enrollments_api, name='clear_student_enrollments'),
     path('api/assign-students-to-sections/', assign_students_to_sections, name='assign_students_to_sections'),
+    path('api/enroll-student-in-section/', enroll_student_in_section, name='enroll_student_in_section'),
+    path('api/remove-student-from-section/', remove_student_from_section, name='remove_student_from_section'),
+    path('api/bulk-enroll-students-in-section/', bulk_enroll_students_in_section, name='bulk_enroll_students_in_section'),
+    path('api/assign-student-to-course-section/', assign_student_to_course_section, name='assign_student_to_course_section'),
+    path('api/enroll-grade-in-course/', enroll_grade_in_course, name='enroll_grade_in_course'),
     
     # Section registration
     path('section-registration/', registration_home, name='registration_home'),
