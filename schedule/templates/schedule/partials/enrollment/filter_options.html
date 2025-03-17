@@ -10,7 +10,7 @@
                 <select class="form-select" id="grade" name="grade">
                     <option value="">All Grades</option>
                     {% for grade in grades %}
-                    <option value="{{ grade }}" {% if grade_filter == grade|stringformat:"i" %}selected{% endif %}>
+                    <option value="{{ grade }}" {% if selected_grade == grade|stringformat:"i" %}selected{% endif %}>
                         Grade {{ grade }}
                     </option>
                     {% endfor %}
