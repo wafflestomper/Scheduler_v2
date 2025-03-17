@@ -28,7 +28,7 @@
         if (allCoursesCheckbox) {
             allCoursesCheckbox.addEventListener('change', function() {
                 courseCheckboxes.forEach(checkbox => {
-                    checkbox.checked = !this.checked;
+                    checkbox.checked = false;
                     checkbox.disabled = this.checked;
                 });
             });
@@ -37,20 +37,37 @@
         // Handle individual course checkboxes
         courseCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const allChecked = Array.from(courseCheckboxes).every(cb => cb.checked);
                 if (allCoursesCheckbox) {
-                    allCoursesCheckbox.checked = !allChecked && courseCheckboxes.length > 0;
+                    // If any course is checked, uncheck "All Courses"
+                    if (this.checked) {
+                        allCoursesCheckbox.checked = false;
+                    } else {
+                        // Check if any courses are checked
+                        const anyChecked = Array.from(courseCheckboxes).some(cb => cb.checked);
+                        if (!anyChecked) {
+                            allCoursesCheckbox.checked = true;
+                            courseCheckboxes.forEach(cb => {
+                                cb.disabled = true;
+                            });
+                        }
+                    }
                 }
             });
         });
         
-        // Set initial state of "All Courses" checkbox
+        // Set initial state of "All Courses" checkbox based on selected courses
         if (courseCheckboxes.length > 0 && allCoursesCheckbox) {
             const anyChecked = Array.from(courseCheckboxes).some(cb => cb.checked);
-            allCoursesCheckbox.checked = !anyChecked;
             
-            // Disable course checkboxes if "All Courses" is checked
-            if (allCoursesCheckbox.checked) {
+            if (anyChecked) {
+                // If any courses are checked, uncheck "All Courses"
+                allCoursesCheckbox.checked = false;
+                courseCheckboxes.forEach(cb => {
+                    cb.disabled = false;
+                });
+            } else {
+                // If no courses are checked, check "All Courses"
+                allCoursesCheckbox.checked = true;
                 courseCheckboxes.forEach(cb => {
                     cb.disabled = true;
                 });
