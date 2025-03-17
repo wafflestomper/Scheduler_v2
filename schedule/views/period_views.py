@@ -16,7 +16,8 @@ def create_period(request):
     """Create a new period."""
     if request.method == 'POST':
         period_name = request.POST.get('period_name', '')
-        days = request.POST.get('days', 'M')
+        days_list = request.POST.getlist('days')
+        days = '|'.join(days_list) if days_list else 'M'  # Default to Monday if no days selected
         slot = request.POST.get('slot')
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
@@ -31,6 +32,9 @@ def create_period(request):
             
             if not end_time:
                 raise ValueError("End time is required")
+            
+            if not days_list:
+                raise ValueError("At least one day must be selected")
             
             # Validate that start_time comes before end_time
             try:
@@ -79,7 +83,8 @@ def edit_period(request, period_id):
     
     if request.method == 'POST':
         period_name = request.POST.get('period_name', '')
-        days = request.POST.get('days', 'M')
+        days_list = request.POST.getlist('days')
+        days = '|'.join(days_list) if days_list else 'M'  # Default to Monday if no days selected
         slot = request.POST.get('slot')
         start_time = request.POST.get('start_time')
         end_time = request.POST.get('end_time')
@@ -94,6 +99,9 @@ def edit_period(request, period_id):
             
             if not end_time:
                 raise ValueError("End time is required")
+            
+            if not days_list:
+                raise ValueError("At least one day must be selected")
             
             # Validate that start_time comes before end_time
             try:
