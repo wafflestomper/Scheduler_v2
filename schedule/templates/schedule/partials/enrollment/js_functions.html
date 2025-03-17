@@ -27,30 +27,22 @@
         // Handle the "All Courses" checkbox
         if (allCoursesCheckbox) {
             allCoursesCheckbox.addEventListener('change', function() {
-                courseCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                    checkbox.disabled = this.checked;
-                });
+                if (this.checked) {
+                    // When "All Courses" is checked, uncheck any individual courses
+                    courseCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                }
+                // Don't disable the course checkboxes to allow selection
             });
         }
         
         // Handle individual course checkboxes
         courseCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                if (allCoursesCheckbox) {
+                if (allCoursesCheckbox && this.checked) {
                     // If any course is checked, uncheck "All Courses"
-                    if (this.checked) {
-                        allCoursesCheckbox.checked = false;
-                    } else {
-                        // Check if any courses are checked
-                        const anyChecked = Array.from(courseCheckboxes).some(cb => cb.checked);
-                        if (!anyChecked) {
-                            allCoursesCheckbox.checked = true;
-                            courseCheckboxes.forEach(cb => {
-                                cb.disabled = true;
-                            });
-                        }
-                    }
+                    allCoursesCheckbox.checked = false;
                 }
             });
         });
@@ -62,16 +54,9 @@
             if (anyChecked) {
                 // If any courses are checked, uncheck "All Courses"
                 allCoursesCheckbox.checked = false;
-                courseCheckboxes.forEach(cb => {
-                    cb.disabled = false;
-                });
-            } else {
-                // If no courses are checked, check "All Courses"
-                allCoursesCheckbox.checked = true;
-                courseCheckboxes.forEach(cb => {
-                    cb.disabled = true;
-                });
             }
+            // Don't auto-check "All Courses" if no courses are selected
+            // Don't disable individual course checkboxes
         }
         
         // Auto-check all eligible checkboxes on page load if courses are selected
