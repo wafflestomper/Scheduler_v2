@@ -37,65 +37,9 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'index' %}">Home</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/students/' in request.path or '/view-students/' in request.path %}active{% endif %}" href="{% url 'view_students' %}">Students</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/courses/' in request.path %}active{% endif %}" href="{% url 'view_courses' %}">Courses</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/teachers/' in request.path %}active{% endif %}" href="{% url 'view_teachers' %}">Teachers</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/rooms/' in request.path %}active{% endif %}" href="{% url 'view_rooms' %}">Rooms</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/periods/' in request.path %}active{% endif %}" href="{% url 'view_periods' %}">Periods</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/enroll-students/' in request.path %}active{% endif %}" href="{% url 'enroll_students' %}">
-                                <i class="bi bi-person-plus"></i> Enrollments
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/course-groups/' in request.path %}active{% endif %}" href="{% url 'course_groups' %}">
-                                <i class="bi bi-diagram-3"></i> Course Groups
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if '/section-registration/' in request.path %}active{% endif %}" href="{% url 'section_registration' %}">
-                                <i class="bi bi-distribute-vertical"></i> Section Registration
-                            </a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'csv_upload' %}">Upload CSV</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'schedule_generation' %}">Generate Schedules</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'master_schedule' %}">Master Schedule</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'student_schedules' %}">Student Schedules</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'schedule_generation' %}">Schedule Generation</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'csv_upload' %}">Data Import/Export</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_reports' %}">Reports</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'section_settings' %}">Settings</a>
-                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Manage
+                                Manage Entities
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="managementDropdown">
                                 <li><a class="dropdown-item" href="{% url 'view_students' %}">Students</a></li>
@@ -104,9 +48,30 @@
                                 <li><a class="dropdown-item" href="{% url 'view_courses' %}">Courses</a></li>
                                 <li><a class="dropdown-item" href="{% url 'view_periods' %}">Periods</a></li>
                                 <li><a class="dropdown-item" href="{% url 'view_sections' %}">Sections</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_reports' %}">Reports</a></li>
+                                <li><a class="dropdown-item" href="{% url 'course_groups' %}">Course Groups</a></li>
                             </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="schedulingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Scheduling
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="schedulingDropdown">
+                                <li><a class="dropdown-item" href="{% url 'enroll_students' %}">Student Enrollments</a></li>
+                                <li><a class="dropdown-item" href="{% url 'section_registration' %}">Section Registration</a></li>
+                                <li><a class="dropdown-item" href="{% url 'schedule_generation' %}">Generate Schedules</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'master_schedule' %}">Master Schedule</a></li>
+                                <li><a class="dropdown-item" href="{% url 'student_schedules' %}">Student Schedules</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/csv-upload/' in request.path %}active{% endif %}" href="{% url 'csv_upload' %}">Import/Export</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/admin-reports/' in request.path %}active{% endif %}" href="{% url 'admin_reports' %}">Reports</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/section-settings/' in request.path %}active{% endif %}" href="{% url 'section_settings' %}">Settings</a>
                         </li>
                     </ul>
                 </div>
