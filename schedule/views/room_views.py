@@ -102,7 +102,8 @@ def delete_room(request, room_id):
     
     if request.method == 'POST':
         # Check if there are any sections using this room
-        if room.sections.exists():
+        from ..models import Section
+        if Section.objects.filter(room=room).exists():
             messages.error(request, f"Cannot delete room '{room.number}' because it has sections assigned to it.")
             return redirect('view_rooms')
         
