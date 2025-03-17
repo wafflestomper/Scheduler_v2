@@ -26,12 +26,12 @@ def schedule_generation(request):
                 Section.objects.all().delete()
                 
                 # Generate new schedules
-                generate_schedules()
+                result = generate_schedules()
                 
-                messages.success(request, "Schedules generated successfully!")
+                messages.info(request, result)
                 
         except Exception as e:
-            messages.error(request, f"Error generating schedules: {str(e)}")
+            messages.error(request, f"Error in schedule generation: {str(e)}")
     
     return render(request, 'schedule/schedule_generation.html', context)
 
@@ -129,242 +129,37 @@ def admin_reports(request):
 
 
 def generate_schedules():
-    """Generate course schedules."""
-    # Get all data
-    courses = Course.objects.all()
-    teachers = Teacher.objects.all()
-    rooms = Room.objects.all()
-    periods = Period.objects.all()
-    students = Student.objects.all()
+    """
+    Placeholder for schedule generation.
+    This function is a simplified version that doesn't actually generate schedules.
+    It will be replaced with a more sophisticated algorithm in the future.
+    """
+    # Get basic data for logging/reporting
+    courses_count = Course.objects.count()
+    teachers_count = Teacher.objects.count()
+    rooms_count = Room.objects.count()
+    periods_count = Period.objects.count()
+    students_count = Student.objects.count()
     
-    # Create sections for core courses first
-    create_core_sections(courses, teachers, rooms, periods)
+    # Log what would normally happen
+    print(f"Schedule generation requested: {courses_count} courses, {teachers_count} teachers, "
+          f"{rooms_count} rooms, {periods_count} periods, {students_count} students")
     
-    # Assign students to core sections
-    assign_students_to_core_sections(students)
+    # In the future, this function will:
+    # 1. Create sections for core courses
+    # 2. Assign students to core sections
+    # 3. Create sections for elective courses
+    # 4. Assign students to elective sections
     
-    # Create sections for elective courses
-    create_elective_sections(courses, teachers, rooms, periods)
-    
-    # Assign students to elective sections
-    assign_students_to_elective_sections(students)
+    return "Schedule generation algorithm is being reimplemented. No schedules were generated."
 
 
-def create_core_sections(courses, teachers, rooms, periods):
-    """Create sections for core courses."""
-    # Get core courses (Math, Science, English, Social Studies)
-    core_courses = courses.filter(type__in=['core'])
-    
-    # For each core course, create the required number of sections
-    for course in core_courses:
-        for i in range(course.sections_needed):
-            # Find an available teacher, room, and period
-            available_teachers = list(teachers)
-            available_rooms = list(rooms)
-            available_periods = list(periods)
-            
-            # Shuffle to randomize assignments
-            import random
-            random.shuffle(available_teachers)
-            random.shuffle(available_rooms)
-            random.shuffle(available_periods)
-            
-            # Attempt to find a valid assignment
-            assigned = False
-            for teacher in available_teachers:
-                if assigned:
-                    break
-                
-                for room in available_rooms:
-                    if assigned:
-                        break
-                    
-                    for period in available_periods:
-                        # Check if this teacher is already teaching during this period
-                        if Section.objects.filter(teacher=teacher, period=period).exists():
-                            continue
-                        
-                        # Check if this room is already in use during this period
-                        if Section.objects.filter(room=room, period=period).exists():
-                            continue
-                        
-                        # Create the section
-                        section_id = f"{course.id}-{i+1}"
-                        section = Section(
-                            id=section_id,
-                            course=course,
-                            section_number=i+1,
-                            teacher=teacher,
-                            room=room,
-                            period=period
-                        )
-                        section.save()
-                        assigned = True
-                        break
-            
-            # If we couldn't find a valid assignment, create an unassigned section
-            if not assigned:
-                section_id = f"{course.id}-{i+1}"
-                section = Section(
-                    id=section_id,
-                    course=course,
-                    section_number=i+1
-                )
-                section.save()
-
-
-def assign_students_to_core_sections(students):
-    """Assign students to core course sections."""
-    # Get core courses
-    core_courses = Course.objects.filter(type='core')
-    
-    # For each student, assign to appropriate core courses
-    for student in students:
-        for course in core_courses:
-            # Skip if course is not for this student's grade level
-            if course.grade_level != student.grade_level:
-                continue
-            
-            # Find sections for this course
-            course_sections = Section.objects.filter(course=course)
-            
-            if not course_sections:
-                continue
-            
-            # Find section with fewest students
-            best_section = None
-            min_students = float('inf')
-            
-            for section in course_sections:
-                section_student_count = section.students.count()
-                if section_student_count < min_students and section_student_count < course.max_students:
-                    min_students = section_student_count
-                    best_section = section
-            
-            # Assign student to best section if found
-            if best_section:
-                from ..models import Enrollment
-                Enrollment.objects.get_or_create(student=student, section=best_section)
-
-
-def create_elective_sections(courses, teachers, rooms, periods):
-    """Create sections for elective courses."""
-    # Get elective courses
-    elective_courses = courses.filter(type__in=['elective', 'required_elective', 'language'])
-    
-    # For each elective course, create the required number of sections
-    for course in elective_courses:
-        for i in range(course.sections_needed):
-            # Find an available teacher, room, and period
-            available_teachers = list(teachers)
-            available_rooms = list(rooms)
-            available_periods = list(periods)
-            
-            # Shuffle to randomize assignments
-            import random
-            random.shuffle(available_teachers)
-            random.shuffle(available_rooms)
-            random.shuffle(available_periods)
-            
-            # Attempt to find a valid assignment
-            assigned = False
-            for teacher in available_teachers:
-                if assigned:
-                    break
-                
-                for room in available_rooms:
-                    if assigned:
-                        break
-                    
-                    for period in available_periods:
-                        # Check if this teacher is already teaching during this period
-                        if Section.objects.filter(teacher=teacher, period=period).exists():
-                            continue
-                        
-                        # Check if this room is already in use during this period
-                        if Section.objects.filter(room=room, period=period).exists():
-                            continue
-                        
-                        # Create the section
-                        section_id = f"{course.id}-{i+1}"
-                        section = Section(
-                            id=section_id,
-                            course=course,
-                            section_number=i+1,
-                            teacher=teacher,
-                            room=room,
-                            period=period
-                        )
-                        section.save()
-                        assigned = True
-                        break
-            
-            # If we couldn't find a valid assignment, create an unassigned section
-            if not assigned:
-                section_id = f"{course.id}-{i+1}"
-                section = Section(
-                    id=section_id,
-                    course=course,
-                    section_number=i+1
-                )
-                section.save()
-
-
-def assign_students_to_elective_sections(students):
-    """Assign students to elective course sections."""
-    # Get elective courses
-    elective_courses = Course.objects.filter(type__in=['elective', 'required_elective', 'language'])
-    
-    # For each student, assign to appropriate elective courses
-    for student in students:
-        # Get periods already assigned to this student
-        assigned_periods = set()
-        for section in student.sections.all():
-            if section.period:
-                assigned_periods.add(section.period.id)
-        
-        # Try to assign 2 electives per student if possible
-        electives_assigned = 0
-        
-        for course in elective_courses:
-            if electives_assigned >= 2:
-                break
-                
-            # Skip if course is not for this student's grade level
-            if course.grade_level != student.grade_level:
-                continue
-            
-            # Find sections for this course
-            course_sections = Section.objects.filter(course=course)
-            
-            if not course_sections:
-                continue
-            
-            # Find section with fewest students that doesn't conflict with student's schedule
-            best_section = None
-            min_students = float('inf')
-            
-            for section in course_sections:
-                # Skip if section has no period assigned
-                if not section.period:
-                    continue
-                    
-                # Skip if period conflicts with student's existing schedule
-                if section.period.id in assigned_periods:
-                    continue
-                
-                section_student_count = section.students.count()
-                if section_student_count < min_students and section_student_count < course.max_students:
-                    min_students = section_student_count
-                    best_section = section
-            
-            # Assign student to best section if found
-            if best_section:
-                from ..models import Enrollment
-                Enrollment.objects.get_or_create(student=student, section=best_section)
-                if best_section.period:
-                    assigned_periods.add(best_section.period.id)
-                electives_assigned += 1
+# Note: The following functions have been removed as part of algorithm cleanup:
+# - create_core_sections
+# - assign_students_to_core_sections
+# - create_elective_sections
+# - assign_students_to_elective_sections
+# These will be reimplemented in a more modular way in future versions.
 
 
 def find_schedule_conflicts():

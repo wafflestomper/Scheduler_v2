@@ -9,13 +9,16 @@ from schedule.utils.section_registration_utils import (
     get_section_stats, get_course_enrollment_stats,
     get_unassigned_students_count, deregister_sections, clear_student_enrollments
 )
-from schedule.utils.balance_assignment import perfect_balance_assignment
-from schedule.utils.language_course_utils import assign_language_courses, get_language_course_conflicts
-from schedule.utils.trimester_course_utils import assign_trimester_courses, get_trimester_course_conflicts
-from schedule.utils.language_core_algorithm import register_language_and_core_courses
-from schedule.utils.art_music_ww_algorithm import register_art_music_ww_courses
-from schedule.utils.two_group_elective_algorithm import register_two_elective_groups
-from schedule.utils.three_group_elective_algorithm import register_three_elective_groups
+# Import placeholder functions instead of original algorithm modules
+from schedule.utils.algorithm_placeholders import (
+    perfect_balance_assignment,
+    assign_language_courses, get_language_course_conflicts,
+    assign_trimester_courses, get_trimester_course_conflicts,
+    register_language_and_core_courses,
+    register_art_music_ww_courses,
+    register_two_elective_groups,
+    register_three_elective_groups
+)
 
 def registration_home(request):
     """
