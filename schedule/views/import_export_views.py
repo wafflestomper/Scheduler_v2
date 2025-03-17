@@ -16,12 +16,34 @@ class CSVUploadView(View):
     """View for handling CSV uploads of various data types."""
     template_name = 'schedule/csv_upload.html'
     
+    def get_context_with_headers(self, form):
+        """Helper method to build context with headers for all data types"""
+        data_types = ProcessorFactory.get_available_data_types()
+        data_type_info = []
+        
+        for dt in data_types:
+            processor = ProcessorFactory.get_processor(dt)
+            if processor:
+                data_type_info.append({
+                    'type': dt,
+                    'display': dt.capitalize(),
+                    'headers': processor.get_expected_headers()
+                })
+        
+        return {
+            'form': form,
+            'data_type_info': data_type_info,
+        }
+    
     def get(self, request):
         # Get previously used data_type from session or use default
         data_type = request.session.get('last_data_type', None)
         initial_data = {'data_type': data_type} if data_type else {}
         form = CSVUploadForm(initial=initial_data)
-        return render(request, self.template_name, {'form': form})
+        
+        # Build and return context with form and headers
+        context = self.get_context_with_headers(form)
+        return render(request, self.template_name, context)
     
     def post(self, request):
         form = CSVUploadForm(request.POST, request.FILES)
@@ -35,7 +57,7 @@ class CSVUploadView(View):
             # Check if file is CSV
             if not csv_file.name.endswith('.csv'):
                 messages.error(request, 'File is not a CSV file. Please upload a file with .csv extension.')
-                return render(request, self.template_name, {'form': form})
+                return render(request, self.template_name, self.get_context_with_headers(form))
             
             # Read the file
             try:
@@ -52,14 +74,14 @@ class CSVUploadView(View):
                     processor = ProcessorFactory.get_processor(data_type)
                 except ValueError as e:
                     messages.error(request, str(e))
-                    return render(request, self.template_name, {'form': form})
+                    return render(request, self.template_name, self.get_context_with_headers(form))
                     
                 expected_headers = processor.get_expected_headers()
                 
                 if not all(header in headers for header in expected_headers):
                     missing_headers = [h for h in expected_headers if h not in headers]
                     messages.error(request, f'CSV file missing required headers: {", ".join(missing_headers)}')
-                    return render(request, self.template_name, {'form': form})
+                    return render(request, self.template_name, self.get_context_with_headers(form))
                 
                 # Process the data using the appropriate processor
                 try:
@@ -89,19 +111,20 @@ class CSVUploadView(View):
                         
                 except ValidationError as e:
                     messages.error(request, f'Validation error: {str(e)}')
-                    return render(request, self.template_name, {'form': form})
+                    return render(request, self.template_name, self.get_context_with_headers(form))
                 except Exception as e:
                     messages.error(request, f'Error processing CSV: {str(e)}')
-                    return render(request, self.template_name, {'form': form})
+                    return render(request, self.template_name, self.get_context_with_headers(form))
                 
                 return redirect('index')
                 
             except Exception as e:
                 messages.error(request, f'Error reading CSV file: {str(e)}')
-                return render(request, self.template_name, {'form': form})
+                return render(request, self.template_name, self.get_context_with_headers(form))
         
-        return render(request, self.template_name, {'form': form})
-    
+        # Form is invalid
+        return render(request, self.template_name, self.get_context_with_headers(form))
+
     def get_expected_headers(self, data_type):
         """Get expected headers for different data types."""
         try:

@@ -1,5 +1,6 @@
 from django import forms
 from .models import Student, Teacher, Room, Course, Section, Period, SectionSettings
+from .services.csv_processors.processor_factory import ProcessorFactory
 
 class CSVUploadForm(forms.Form):
     csv_file = forms.FileField(
@@ -8,17 +9,15 @@ class CSVUploadForm(forms.Form):
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'})
     )
     
-    data_type = forms.ChoiceField(
-        choices=[
-            ('courses', 'Courses'),
-            ('periods', 'Periods'),
-            ('rooms', 'Rooms'),
-            ('sections', 'Sections'),
-            ('students', 'Students'),
-            ('teachers', 'Teachers'),
-        ],
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Dynamically get data types from the processor factory
+        data_types = ProcessorFactory.get_available_data_types()
+        choices = [(dt, dt.capitalize()) for dt in data_types]
+        self.fields['data_type'] = forms.ChoiceField(
+            choices=choices,
+            widget=forms.Select(attrs={'class': 'form-select'})
+        )
 
 class StudentForm(forms.ModelForm):
     class Meta:
