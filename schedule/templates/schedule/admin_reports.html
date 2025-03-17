@@ -330,7 +330,7 @@
                                                 <td>{{ section.course.get_type_display }}</td>
                                                 <td>{{ current_size }}</td>
                                                 <td>{{ min_size }}</td>
-                                                <td class="text-danger">{{ min_size|sub:current_size }}</td>
+                                                <td class="text-danger">{{ min_size|subtract:current_size }}</td>
                                                 <td>{{ section.period }}</td>
                                             </tr>
                                         {% endfor %}
