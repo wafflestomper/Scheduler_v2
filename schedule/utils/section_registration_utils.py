@@ -117,19 +117,15 @@ def deregister_sections(course_id=None, grade_level=None):
 
 def clear_student_enrollments(student_id):
     """
-    Clear all section enrollments for a specific student.
+    Clear all section enrollments for a student.
     
     Args:
-        student_id: ID of the student whose enrollments should be cleared
+        student_id: ID of the student
         
     Returns:
-        int: Count of enrollments that were removed
+        int: Number of enrollments cleared
     """
-    with transaction.atomic():
-        # Count enrollments before deletion for reporting
-        enrollment_count = Enrollment.objects.filter(student_id=student_id).count()
-        
-        # Delete the enrollments
-        Enrollment.objects.filter(student_id=student_id).delete()
-        
-        return enrollment_count 
+    from ..services.enrollment_services.enrollment_service import EnrollmentService
+    
+    result = EnrollmentService.clear_student_enrollments(student_id)
+    return result['count'] 
