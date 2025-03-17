@@ -1,5 +1,5 @@
-course_id,name,teachers,grade_level,duration,sections_needed
-C001,Math 6,T001,6,1,2
-C002,English 7,T002,7,1,1
-C003,Science 8,T001,8,1,1
-C004,Art,T003,0,1,1 
+course_id,name,course_type,eligible_teachers,grade_level,sections_needed,duration
+C001,Math 6,core,T001,6,2,year
+C002,English 7,core,T002,7,1,year
+C003,Science 8,core,T001,8,1,year
+C004,Art,elective,T003,0,1,year 
