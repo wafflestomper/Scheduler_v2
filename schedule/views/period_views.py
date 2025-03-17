@@ -137,7 +137,8 @@ def delete_period(request, period_id):
     
     if request.method == 'POST':
         # Check if there are any sections using this period
-        if period.sections.exists():
+        from ..models import Section
+        if Section.objects.filter(period=period).exists():
             messages.error(request, f"Cannot delete period '{period}' because it has sections assigned to it.")
             return redirect('view_periods')
         
