@@ -555,4 +555,55 @@ Enhanced the student schedule viewing experience with a new dedicated view:
 
 This enhancement provides students, teachers, and administrators with a more comprehensive and user-friendly way to view student schedules, making it easier to identify scheduling issues and ensure students have complete schedules.
 
+## 2024-03-16 - Fixed CSV Upload for Sections
+
+- Fixed inconsistency between sections.csv download template and expected upload format
+- Updated CSV template to match the processing logic in the backend
+- Modified template headers to properly align with the backend code's expectations
+- Fixed the example data shown in the UI to correctly guide users
+- Refactored the section creation/update logic for more robust handling of CSV imports
+- Removed unnecessary fields that were causing confusion (section_id, exact_size)
+- Improved error handling for the sections upload process
+- Fixed expected headers validation to match the updated template (removed exact_size requirement)
+
+## 2024-03-17 - Fixed Room Deletion Error
+
+- Fixed an AttributeError that occurred when trying to delete a room
+- Updated the code to properly check for sections that are using a room before allowing deletion
+- Improved the error handling when a room cannot be deleted due to existing relationships
+- Added proper import of the Section model in the room_views.py file
+
+## 2024-03-17 - Fixed Period Deletion Error
+
+- Fixed an AttributeError that occurred when trying to delete a period
+- Updated the period deletion code to properly check for sections using the period
+- Used the same approach as the room deletion fix by directly querying the Section model
+- Ensured consistent error handling across all entity deletion operations
+
+## 2024-03-17 - Fixed Period Day Selection
+
+- Fixed an issue where selecting multiple day checkboxes in the period edit form wasn't saving correctly
+- Updated the code to use `request.POST.getlist('days')` instead of `request.POST.get('days')` to properly handle multiple checkbox selections
+- Added input validation to ensure at least one day is selected
+- Applied the fix to both create_period and edit_period functions for consistency
+- Improved error feedback when no days are selected
+
+## 2024-03-17 - Improved Period Time Display Format
+
+- Changed the time display format in the periods management page from 24-hour format to 12-hour format with AM/PM
+- Updated both the main period listing page and the period deletion confirmation page
+- Improved readability for users more familiar with standard 12-hour clock format
+- Maintained consistent time display format across all period-related pages
+
+## 2024-03-17 - Improved Navigation Menu Organization
+
+- Reorganized the navigation menu to reduce clutter and eliminate duplicate links
+- Created logical groupings with dropdown menus:
+  - "Manage Entities" for all data management (students, teachers, rooms, courses, periods, sections)
+  - "Scheduling" for enrollment and schedule generation functions
+- Reduced the number of top-level menu items from 17 to 6
+- Ensured consistent active state highlighting for all menu items
+- Improved mobile responsiveness by simplifying the menu structure
+- Maintained all functionality while providing a cleaner, more organized user experience
+
 ## Next Steps 
