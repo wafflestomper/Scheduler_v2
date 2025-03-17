@@ -334,31 +334,7 @@ Completed a significant refactoring of the section registration system to improv
 
 These changes maintain all existing functionality while making the codebase more maintainable and easier to understand. No new features were introduced, but the code structure is now more organized and follows better software engineering practices.
 
-## Next Steps
-
-### UI Improvements
-- Add visual schedule display for easier viewing
-- Implement drag-and-drop interface for schedule adjustments
-
-### Algorithm Improvements
-- Enhance scheduling constraints for better class balance
-- Add teacher preference considerations
-- Optimize room assignments based on capacity and class size
-- Implement student load balancing across sections
-
-### Documentation
-- Create user documentation for school administrators
-- Add inline code documentation for future maintenance
-- Document the CSV format requirements in more detail
-- Add setup instructions for new deployments
-
-### Deployment Preparation
-- Configure PostgreSQL for production use
-- Set up proper environment variables
-- Add user authentication for admin functions
-- Create a deployment guide
-
-### 2023-05-25 15:30
+## 2025-03-25 15:30
 - Implemented language course groups feature for scheduling related trimester courses
   - Added CourseGroup model to group related language courses (SPA6, CHI6, FRE6)
   - Enhanced section assignment algorithm to respect course group constraints
@@ -366,8 +342,6 @@ These changes maintain all existing functionality while making the codebase more
   - Ensured students enrolled in all courses of a group get assigned to sections with the same period but different trimesters
   - Added admin interface for managing course groups
   - Tested functionality with real language courses and verified correct assignments
-
-## Next Steps
 
 ## 2024-03-15 - Implemented 6th Grade Trimester Course Assignment System
 
@@ -622,5 +596,33 @@ This enhancement provides students, teachers, and administrators with a more com
 - Prepared the codebase for implementing new, more modular scheduling algorithms
 - Ensured all UI components continue to work without errors
 - Added informative messages to users when scheduling functions are used
+
+## 2024-03-17 - Fixed Reports Page and Removed Redundant Code
+
+- Fixed the Reports page not loading due to a template filter error
+  - Found and corrected a mismatch between template code using 'sub' filter and the actual 'subtract' filter defined in templatetags
+  - Updated active state in navigation to correctly highlight when on reports page
+- Removed redundant sections CSV format information from the CSV upload page
+  - Eliminated duplicate card showing the same CSV format that was already displayed in the accordion
+  - Made the page cleaner and more consistent
+- Merged all fixes from the cleaning-up-and-refactoring branch into main
+
+## 2024-03-18 - Refactored Large Template Files
+
+- Refactored the enroll_students.html template (1001 lines) into reusable partials
+  - Created a structured directory for enrollment-related partials in schedule/templates/schedule/partials/enrollment/
+  - Split the template into 4 reusable components:
+    - filter_options.html: Contains the grade level and course filtering controls
+    - enrollment_status.html: Contains the enrollment statistics and student table
+    - response_modal.html: Contains the modal for displaying operation results
+    - js_functions.html: Contains all JavaScript functionality
+  - Reduced the main template from over 1000 lines to just 38 lines
+  - Made sure all existing functionality works correctly without breaking any features
+  - Used the same template inheritance pattern already used in other parts of the system
+  - Added appropriate comments to make the code easier to understand and maintain
+- This refactoring approach improves:
+  - Code maintainability by separating concerns
+  - Potential for reuse of components in other parts of the application
+  - Readability of each individual component
 
 ## Next Steps 
