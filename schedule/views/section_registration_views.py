@@ -5,16 +5,14 @@ from django.contrib import messages
 
 from schedule.models import Student, Section, Course, CourseEnrollment, Enrollment, TrimesterCourseGroup
 from schedule.forms import LanguageCourseForm, TrimesterCourseForm
-from schedule.utils.section_registration_utils import (
-    get_section_stats, get_course_enrollment_stats,
-    get_unassigned_students_count, deregister_sections, clear_student_enrollments
-)
-# Import placeholder functions instead of original algorithm modules
+from schedule.services.section_registration_services.registration_service import RegistrationService
+from schedule.services.section_registration_services.language_course_service import LanguageCourseService
+from schedule.services.section_registration_services.trimester_course_service import TrimesterCourseService
+from schedule.services.section_registration_services.algorithm_service import AlgorithmService
+from schedule.services.enrollment_services.enrollment_service import EnrollmentService
+
+# Import placeholder functions for algorithm modules not yet refactored
 from schedule.utils.algorithm_placeholders import (
-    perfect_balance_assignment,
-    assign_language_courses, get_language_course_conflicts,
-    assign_trimester_courses, get_trimester_course_conflicts,
-    register_language_and_core_courses,
     register_art_music_ww_courses,
     register_two_elective_groups,
     register_three_elective_groups
@@ -26,13 +24,13 @@ def registration_home(request):
     """
     # Get all sections with their capacities and current enrollment counts
     sections = Section.objects.all().select_related('course', 'period', 'teacher', 'room')
-    section_stats = get_section_stats(sections)
+    section_stats = RegistrationService.get_section_stats(sections)
     
     # Get course enrollment statistics
-    course_enrollment_stats = get_course_enrollment_stats()
+    course_enrollment_stats = RegistrationService.get_course_enrollment_stats()
     
     # Get count of students with unassigned sections
-    unassigned_students_count = get_unassigned_students_count()
+    unassigned_students_count = RegistrationService.get_unassigned_students_count()
     
     context = {
         'unassigned_students_count': unassigned_students_count,
@@ -46,12 +44,10 @@ def view_student_schedule(request, student_id):
     """
     View a specific student's schedule
     """
-    student = Student.objects.get(id=student_id)
-    
-    # Get the student's current section assignments
-    enrollments = Enrollment.objects.filter(
-        student=student
-    ).select_related('section', 'section__course', 'section__period', 'section__teacher', 'section__room')
+    # Get student enrollments using EnrollmentService
+    result = EnrollmentService.get_student_enrollments(student_id)
+    student = result['student']
+    enrollments = result['enrollments']
     
     # Get courses the student is enrolled in but not assigned to sections
     enrolled_course_ids = [enrollment.section.course.id for enrollment in enrollments]
@@ -81,35 +77,34 @@ def section_registration(request):
             
             if action == 'assign_sections':
                 course_id = data.get('course_id')  # Optional: assign for a specific course only
-                # Call the balancing algorithm
-                success, message, assignments = perfect_balance_assignment(course_id)
+                
+                # Call the balancing algorithm service
+                result = AlgorithmService.balance_section_assignments(course_id)
                 
                 # Create a properly formatted response
-                results = {
-                    'status': 'error' if not success else 'success',
-                    'message': message,
-                    'success_count': 0,
-                    'failure_count': 0
-                }
-                return JsonResponse(results)
+                return JsonResponse({
+                    'status': 'success' if result['success'] else 'error',
+                    'message': result['message'],
+                    'success_count': result['success_count'],
+                    'failure_count': result['failure_count']
+                })
             
             elif action == 'assign_language_core':
                 grade_level = data.get('grade_level', 6)  # Default to 6th grade
                 undo_depth = data.get('undo_depth', 3)    # Default undo depth
                 
-                # Call the new language-core algorithm
-                success, message, assignments = register_language_and_core_courses(grade_level, undo_depth)
+                # Call the language-core algorithm service
+                result = AlgorithmService.register_language_and_core_courses(grade_level, undo_depth)
                 
                 # Create a properly formatted response
-                results = {
-                    'status': 'error' if not success else 'success',
-                    'message': message,
-                    'language_success': 0,
-                    'language_failure': 0,
-                    'core_success': 0,
-                    'core_failure': 0,
-                }
-                return JsonResponse(results)
+                return JsonResponse({
+                    'status': 'success' if result['success'] else 'error',
+                    'message': result['message'],
+                    'language_success': result['language_success'],
+                    'language_failure': result['language_failure'],
+                    'core_success': result['core_success'],
+                    'core_failure': result['core_failure']
+                })
                 
             elif action == 'assign_art_music_ww':
                 grade_level = data.get('grade_level', 6)  # Default to 6th grade
@@ -169,13 +164,13 @@ def section_registration(request):
                 course_id = data.get('course_id')  # Optional: deregister for a specific course only
                 grade_level = data.get('grade_level')  # Optional: deregister for a specific grade only
                 
-                # Deregister the sections
-                enrollment_count = deregister_sections(course_id, grade_level)
+                # Use service to deregister sections
+                result = RegistrationService.deregister_sections(course_id, grade_level)
                 
                 return JsonResponse({
                     'status': 'success',
-                    'message': f'Successfully deregistered {enrollment_count} section assignments',
-                    'deregistered_count': enrollment_count
+                    'message': result['message'],
+                    'deregistered_count': result['count']
                 })
                 
             elif action == 'clear_student_enrollments':
@@ -184,13 +179,13 @@ def section_registration(request):
                 if not student_id:
                     return JsonResponse({'status': 'error', 'message': 'Student ID is required'})
                 
-                # Clear the student's enrollments
-                enrollment_count = clear_student_enrollments(student_id)
+                # Clear the student's enrollments using service
+                result = EnrollmentService.clear_student_enrollments(student_id)
                 
                 return JsonResponse({
                     'status': 'success',
-                    'message': f'Successfully cleared {enrollment_count} section enrollments for student',
-                    'cleared_count': enrollment_count
+                    'message': result['message'],
+                    'cleared_count': result['count']
                 })
                 
             else:
@@ -218,15 +213,15 @@ def assign_language_course_sections(request):
             language_courses = form.cleaned_data['courses']
             preferred_period = form.cleaned_data['preferred_period']
             
-            # Perform the assignment
-            success, message, assignments = assign_language_courses(student, language_courses, preferred_period)
+            # Perform the assignment using service
+            result = LanguageCourseService.assign_language_courses(student, language_courses, preferred_period)
             
-            if success:
-                messages.success(request, f"Successfully assigned language courses for {student.name}: {message}")
+            if result['success']:
+                messages.success(request, f"Successfully assigned language courses for {student.name}: {result['message']}")
                 # Redirect to student schedule view
                 return redirect('view_student_schedule', student_id=student_id)
             else:
-                messages.error(request, f"Error assigning language courses for {student.name}: {message}")
+                messages.error(request, f"Error assigning language courses for {student.name}: {result['message']}")
     else:
         form = LanguageCourseForm()
     
@@ -239,7 +234,7 @@ def assign_language_course_sections(request):
     ).distinct()
     
     for student in students:
-        conflicts = get_language_course_conflicts(student)
+        conflicts = LanguageCourseService.get_language_course_conflicts(student)
         if conflicts:
             students_with_conflicts.append({
                 'student': student,
@@ -274,15 +269,15 @@ def assign_trimester_course_sections(request):
                 from schedule.models import Period
                 preferred_period = Period.objects.get(id=preferred_period_id)
             
-            # Perform the assignment
-            success, message, assignments = assign_trimester_courses(student, group_ids, preferred_period)
+            # Perform the assignment using service
+            result = TrimesterCourseService.assign_trimester_courses(student, group_ids, preferred_period)
             
-            if success:
-                messages.success(request, f"Successfully assigned trimester courses for {student.name}: {message}")
+            if result['success']:
+                messages.success(request, f"Successfully assigned trimester courses for {student.name}: {result['message']}")
                 # Redirect to student schedule view
                 return redirect('view_student_schedule', student_id=student_id)
             else:
-                messages.error(request, f"Error assigning trimester courses for {student.name}: {message}")
+                messages.error(request, f"Error assigning trimester courses for {student.name}: {result['message']}")
     else:
         form = TrimesterCourseForm()
     
@@ -307,7 +302,7 @@ def assign_trimester_course_sections(request):
     
     # Check for conflicts
     for student in students:
-        conflicts = get_trimester_course_conflicts(student)
+        conflicts = TrimesterCourseService.get_trimester_course_conflicts(student)
         if conflicts:
             students_with_conflicts.append({
                 'student': student,
